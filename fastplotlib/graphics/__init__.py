@@ -12,6 +12,4 @@ __all__ = [
     "ScatterGraphic",
     "ImageGraphic",
     "TextGraphic",
-    "LineCollection",
-    "LineStack",
 ]

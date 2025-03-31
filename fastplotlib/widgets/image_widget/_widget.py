@@ -1,10 +1,8 @@
-from copy import deepcopy
 from typing import Callable
 from warnings import warn
 
 import numpy as np
 
-from rendercanvas import BaseRenderCanvas
 
 from ...layouts import ImguiFigure as Figure
 from ...graphics import ImageGraphic
@@ -143,7 +141,7 @@ class ImageWidget:
                     f"{len(self.managed_graphics)} image widget subplots"
                 )
 
-            for name, g in zip(names, self.managed_graphics):
+            for name, g in zip(names, self.managed_graphics, strict=False):
                 g.cmap = name
 
         elif isinstance(names, str):
@@ -495,7 +493,7 @@ class ImageWidget:
         # get max bound for all data arrays for all slider dimensions and ensure compatibility across slider dims
         self._dims_max_bounds: dict[str, int] = {k: 0 for k in self.slider_dims}
         for i, _dim in enumerate(list(self._dims_max_bounds.keys())):
-            for array, partition in zip(self.data, self.n_scrollable_dims):
+            for array, partition in zip(self.data, self.n_scrollable_dims, strict=False):
                 if partition <= i:
                     continue
                 else:
@@ -527,7 +525,7 @@ class ImageWidget:
         self._figure: Figure = Figure(**figure_kwargs_default)
 
         self._histogram_widget = histogram_widget
-        for data_ix, (d, subplot) in enumerate(zip(self.data, self.figure)):
+        for data_ix, (d, subplot) in enumerate(zip(self.data, self.figure, strict=False)):
             frame = self._process_indices(d, slice_indices=self._current_index)
             frame = self._process_frame_apply(frame, data_ix)
 
@@ -844,7 +842,7 @@ class ImageWidget:
         """
         Reset the vmin and vmax w.r.t. the full data
         """
-        for data, subplot in zip(self.data, self.figure):
+        for data, subplot in zip(self.data, self.figure, strict=False):
             if "histogram_lut" not in subplot.docks["right"]:
                 continue
             hlut = subplot.docks["right"]["histogram_lut"]
@@ -908,7 +906,7 @@ class ImageWidget:
                 f" current number of data arrays {len(self._data)}"
             )
         # check all arrays
-        for i, (new_array, current_array) in enumerate(zip(new_data, self._data)):
+        for i, (new_array, current_array) in enumerate(zip(new_data, self._data, strict=False)):
             if new_array.ndim != current_array.ndim:
                 raise ValueError(
                     f"new data ndim {new_array.ndim} at index {i} "
@@ -920,13 +918,13 @@ class ImageWidget:
 
             if self.n_scrollable_dims[i] != new_scrollable_dims:
                 raise ValueError(
-                    f"number of dimensions of data arrays must match number of dimensions of "
-                    f"existing data arrays"
+                    "number of dimensions of data arrays must match number of dimensions of "
+                    "existing data arrays"
                 )
 
         # if checks pass, update with new data
         for i, (new_array, current_array, subplot) in enumerate(
-            zip(new_data, self._data, self.figure)
+            zip(new_data, self._data, self.figure, strict=False)
         ):
             # check last two dims (x and y) to see if data shape is changing
             old_data_shape = self._data[i].shape[-self.n_img_dims[i] :]
