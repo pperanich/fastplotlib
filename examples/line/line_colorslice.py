@@ -27,36 +27,30 @@ a = 0.5
 ys = np.sinc(xs) * 3
 sinc_data = np.column_stack([xs, ys])
 
-sine = figure[0, 0].add_line(
-    data=sine_data,
-    thickness=5,
-    colors="magenta"
-)
+sine = figure[0, 0].add_line(data=sine_data, thickness=5, colors="magenta")
 
 # you can also use colormaps for lines!
 cosine = figure[0, 0].add_line(
     data=cosine_data,
     thickness=12,
     cmap="autumn",
-    offset=(0, 3, 0)  # places the graphic at a y-axis offset of 3, offsets don't affect data
+    offset=(
+        0,
+        3,
+        0,
+    ),  # places the graphic at a y-axis offset of 3, offsets don't affect data
 )
 
 # or a list of colors for each datapoint
 colors = ["r"] * 25 + ["purple"] * 25 + ["y"] * 25 + ["b"] * 25
 sinc = figure[0, 0].add_line(
-    data=sinc_data,
-    thickness=5,
-    colors=colors,
-    offset=(0, 6, 0)
+    data=sinc_data, thickness=5, colors=colors, offset=(0, 6, 0)
 )
 
 zeros = np.zeros(xs.size)
 zeros_data = np.column_stack([xs, zeros])
 zeros = figure[0, 0].add_line(
-    data=zeros_data,
-    thickness=8,
-    colors="w",
-    offset=(0, 10, 0)
+    data=zeros_data, thickness=8, colors="w", offset=(0, 10, 0)
 )
 
 figure.show()

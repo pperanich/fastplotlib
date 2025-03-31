@@ -41,13 +41,16 @@ scatter = subplot_scatter.add_scatter(data=cloud, sizes=3, colors=colors, alpha=
 
 
 i = 0.05
+
+
 def cycle_colors(subplot):
     global i
     # cycle the red values
-    scatter.colors[n_points * 2:, 0] = np.abs(np.sin(i))
-    scatter.colors[n_points * 2:, 1] = np.abs(np.sin(i + (np.pi / 4)))
-    scatter.colors[n_points * 2:, 2] = np.abs(np.cos(i))
+    scatter.colors[n_points * 2 :, 0] = np.abs(np.sin(i))
+    scatter.colors[n_points * 2 :, 1] = np.abs(np.sin(i + (np.pi / 4)))
+    scatter.colors[n_points * 2 :, 2] = np.abs(np.cos(i))
     i += 0.05
+
 
 subplot_scatter.add_animations(cycle_colors)
 

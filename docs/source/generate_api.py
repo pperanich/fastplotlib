@@ -48,15 +48,10 @@ with open(API_DIR.joinpath("fastplotlib.rst"), "w") as f:
         "fastplotlib\n"
         "***********\n\n"
         ".. currentmodule:: fastplotlib\n\n"
-
         ".. autofunction:: fastplotlib.pause_events\n\n"
-        
         ".. autofunction:: fastplotlib.enumerate_adapters\n\n"
-        
         ".. autofunction:: fastplotlib.select_adapter\n\n"
-        
         ".. autofunction:: fastplotlib.print_wgpu_report\n\n"
-        
         "fastplotlib.loop\n"
         "------------------\n"
         "See the rendercanvas docs: https://rendercanvas.readthedocs.io/stable/api.html#rendercanvas.BaseLoop "
@@ -138,11 +133,7 @@ def generate_class(
 def generate_functions_module(module, name: str, generate_header: bool = True):
     underline = "*" * len(name)
     if generate_header:
-        header = (
-            f"{name}\n"
-            f"{underline}\n"
-            f"\n"
-        )
+        header = f"{name}\n{underline}\n\n"
     else:
         header = "\n"
     out = (
@@ -163,21 +154,17 @@ def generate_page(
 ):
     page_name_underline = "*" * len(page_name)
     with open(source_path, "w") as f:
-        f.write(
-            f".. _api.{page_name}:\n"
-            f"\n"
-            f"{page_name}\n"
-            f"{page_name_underline}\n"
-            f"\n"
-        )
+        f.write(f".. _api.{page_name}:\n\n{page_name}\n{page_name_underline}\n\n")
 
         for cls, module in zip(classes, modules):
             to_write = generate_class(cls, module)
             f.write(to_write)
 
+
 #######################################################
 # Used for GraphicFeature class event table
 # copy-pasted from https://pablofernandez.tech/2019/03/21/turning-a-list-of-dicts-into-a-restructured-text-table/
+
 
 def _generate_header(field_names, column_widths):
     with StringIO() as output:
@@ -185,7 +172,9 @@ def _generate_header(field_names, column_widths):
             output.write(f"+-{'-' * column_widths[field_name]}-")
         output.write("+\n")
         for field_name in field_names:
-            output.write(f"| {field_name} {' ' * (column_widths[field_name] - len(field_name))}")
+            output.write(
+                f"| {field_name} {' ' * (column_widths[field_name] - len(field_name))}"
+            )
         output.write("|\n")
         for field_name in field_names:
             output.write(f"+={'=' * column_widths[field_name]}=")
@@ -196,7 +185,9 @@ def _generate_header(field_names, column_widths):
 def _generate_row(row, field_names, column_widths):
     with StringIO() as output:
         for field_name in field_names:
-            output.write(f"| {row[field_name]}{' ' * (column_widths[field_name] - len(str(row[field_name])))} ")
+            output.write(
+                f"| {row[field_name]}{' ' * (column_widths[field_name] - len(str(row[field_name])))} "
+            )
         output.write("|\n")
         for field_name in field_names:
             output.write(f"+-{'-' * column_widths[field_name]}-")
@@ -211,7 +202,9 @@ def _get_fields(data):
         for field_name in row:
             if field_name not in field_names:
                 field_names.append(field_name)
-            column_widths[field_name] = max(column_widths[field_name], len(field_name), len(str(row[field_name])))
+            column_widths[field_name] = max(
+                column_widths[field_name], len(field_name), len(str(row[field_name]))
+            )
     return field_names, column_widths
 
 
@@ -226,6 +219,7 @@ def dict_to_rst_table(data):
         output.write("\n")
 
         return output.getvalue()
+
 
 #######################################################
 
@@ -354,12 +348,7 @@ def main():
 
     with open(TOOLS_DIR.joinpath("index.rst"), "w") as f:
         f.write(
-            f"Tools\n"
-            f"*****\n"
-            f"\n"
-            f".. toctree::\n"
-            f"    :maxdepth: 1\n"
-            f"{tools_class_names_str}\n"
+            f"Tools\n*****\n\n.. toctree::\n    :maxdepth: 1\n{tools_class_names_str}\n"
         )
 
     for tool_cls in tools_classes:
@@ -424,7 +413,9 @@ def main():
     ##############################################################################
 
     utils_str = generate_functions_module(utils.functions, "fastplotlib.utils")
-    utils_str += generate_functions_module(utils._plot_helpers, "fastplotlib.utils", generate_header=False)
+    utils_str += generate_functions_module(
+        utils._plot_helpers, "fastplotlib.utils", generate_header=False
+    )
 
     with open(API_DIR.joinpath("utils.rst"), "w") as f:
         f.write(utils_str)
