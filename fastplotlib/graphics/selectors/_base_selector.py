@@ -114,8 +114,8 @@ class BaseSelector(Graphic):
         fill: Tuple[Mesh, ...] = None,
         vertices: Tuple[Points, ...] = None,
         hover_responsive: Tuple[WorldObject, ...] = None,
-        arrow_keys_modifier: str = None,
-        axis: str = None,
+        arrow_keys_modifier: str | None = None,
+        axis: str | None = None,
         parent: Graphic = None,
         **kwargs,
     ):

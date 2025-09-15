@@ -40,7 +40,7 @@ class VertexColors(BufferManager):
         self,
         colors: str | np.ndarray | tuple[float] | list[float] | list[str],
         n_colors: int,
-        alpha: float = None,
+        alpha: float | None = None,
         isolated_buffer: bool = True,
     ):
         """

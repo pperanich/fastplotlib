@@ -287,15 +287,15 @@ class ImageWidget:
     def __init__(
         self,
         data: np.ndarray | list[np.ndarray],
-        window_funcs: dict[str, tuple[Callable, int]] = None,
-        frame_apply: Callable | dict[int, Callable] = None,
-        figure_shape: tuple[int, int] = None,
-        names: list[str] = None,
-        figure_kwargs: dict = None,
+        window_funcs: dict[str, tuple[Callable, int]] | None = None,
+        frame_apply: Callable | dict[int, Callable] | None = None,
+        figure_shape: tuple[int, int] | None = None,
+        names: list[str] | None = None,
+        figure_kwargs: dict | None = None,
         histogram_widget: bool = True,
-        rgb: bool | list[bool] = None,
+        rgb: bool | list[bool] | None = None,
         cmap: str = "plasma",
-        graphic_kwargs: dict = None,
+        graphic_kwargs: dict | None = None,
     ):
         """
         This widget facilitates high-level navigation through image stacks, which are arrays containing one or more

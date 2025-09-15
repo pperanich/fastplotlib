@@ -7,7 +7,7 @@ import pygfx
 
 from ..graphics import Graphic
 from ..graphics.features import GraphicFeatureEvent
-from ..graphics import LineGraphic, ScatterGraphic, ImageGraphic
+from ..graphics import LineGraphic
 from ..utils import mesh_masks
 
 
@@ -215,7 +215,7 @@ class Legend(Graphic):
                     f"All labels within a legend must be unique."
                 )
 
-    def add_graphic(self, graphic: Graphic, label: str = None):
+    def add_graphic(self, graphic: Graphic, label: str | None = None):
         if graphic in self._graphics:
             raise KeyError(
                 f"Graphic already exists in legend with label: '{self._items[graphic._fpl_address].label}'"

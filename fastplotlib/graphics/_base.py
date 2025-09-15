@@ -17,7 +17,6 @@ else:
 import pygfx
 
 from .features import (
-    BufferManager,
     Deleted,
     Name,
     Offset,
@@ -74,7 +73,7 @@ class Graphic:
 
     def __init__(
         self,
-        name: str = None,
+        name: str | None = None,
         offset: np.ndarray | list | tuple = (0.0, 0.0, 0.0),
         rotation: np.ndarray | list | tuple = (0.0, 0.0, 0.0, 1.0),
         visible: bool = True,

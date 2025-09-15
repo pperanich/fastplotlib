@@ -135,12 +135,12 @@ class LineCollection(GraphicCollection, _LineCollectionProperties):
         alpha: float = 1.0,
         cmap: Sequence[str] | str = None,
         cmap_transform: np.ndarray | List = None,
-        name: str = None,
-        names: list[str] = None,
+        name: str | None = None,
+        names: list[str] | None = None,
         metadata: Any = None,
         metadatas: Sequence[Any] | np.ndarray = None,
         isolated_buffer: bool = True,
-        kwargs_lines: list[dict] = None,
+        kwargs_lines: list[dict] | None = None,
         **kwargs,
     ):
         """
@@ -342,7 +342,7 @@ class LineCollection(GraphicCollection, _LineCollectionProperties):
         return super().__getitem__(item)
 
     def add_linear_selector(
-        self, selection: float = None, padding: float = 0.0, axis: str = "x", **kwargs
+        self, selection: float | None = None, padding: float = 0.0, axis: str = "x", **kwargs
     ) -> LinearSelector:
         """
         Adds a linear selector.
@@ -387,13 +387,13 @@ class LineCollection(GraphicCollection, _LineCollectionProperties):
         self._plot_area.add_graphic(selector, center=False)
 
         # place selector above this graphic
-        selector.offset = selector.offset + (0.0, 0.0, self.offset[-1] + 1)
+        selector.offset = (*selector.offset, 0.0, 0.0, self.offset[-1] + 1)
 
         return selector
 
     def add_linear_region_selector(
         self,
-        selection: tuple[float, float] = None,
+        selection: tuple[float, float] | None = None,
         padding: float = 0.0,
         axis: str = "x",
         **kwargs,
@@ -444,7 +444,7 @@ class LineCollection(GraphicCollection, _LineCollectionProperties):
         self._plot_area.add_graphic(selector, center=False)
 
         # place selector below this graphic
-        selector.offset = selector.offset + (0.0, 0.0, self.offset[-1] - 1)
+        selector.offset = (*selector.offset, 0.0, 0.0, self.offset[-1] - 1)
 
         # PlotArea manages this for garbage collection etc. just like all other Graphics
         # so we should only work with a proxy on the user-end
@@ -452,7 +452,7 @@ class LineCollection(GraphicCollection, _LineCollectionProperties):
 
     def add_rectangle_selector(
         self,
-        selection: tuple[float, float, float] = None,
+        selection: tuple[float, float, float] | None = None,
         **kwargs,
     ) -> RectangleSelector:
         """
@@ -571,14 +571,14 @@ class LineStack(LineCollection):
         alpha: float = 1.0,
         cmap: Iterable[str] | str = None,
         cmap_transform: np.ndarray | List = None,
-        name: str = None,
-        names: list[str] = None,
+        name: str | None = None,
+        names: list[str] | None = None,
         metadata: Any = None,
         metadatas: Sequence[Any] | np.ndarray = None,
         isolated_buffer: bool = True,
         separation: float = 10.0,
         separation_axis: str = "y",
-        kwargs_lines: list[dict] = None,
+        kwargs_lines: list[dict] | None = None,
         **kwargs,
     ):
         """

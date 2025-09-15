@@ -30,7 +30,7 @@ class ScatterGraphic(PositionsGraphic):
         colors: str | np.ndarray | tuple[float] | list[float] | list[str] = "w",
         uniform_color: bool = False,
         alpha: float = 1.0,
-        cmap: str = None,
+        cmap: str | None = None,
         cmap_transform: np.ndarray = None,
         isolated_buffer: bool = True,
         sizes: float | np.ndarray | Sequence[float] = 1,

@@ -20,8 +20,8 @@ class ImguiFigure(Figure):
     def __init__(
         self,
         shape: tuple[int, int] = (1, 1),
-        rects: list[tuple | np.ndarray] = None,
-        extents: list[tuple | np.ndarray] = None,
+        rects: list[tuple | np.ndarray] | None = None,
+        extents: list[tuple | np.ndarray] | None = None,
         cameras: (
             Literal["2d", "3d"]
             | Iterable[Iterable[Literal["2d", "3d"]]]
@@ -29,19 +29,15 @@ class ImguiFigure(Figure):
             | Iterable[Iterable[pygfx.PerspectiveCamera]]
         ) = "2d",
         controller_types: (
-            Iterable[Iterable[Literal["panzoom", "fly", "trackball", "orbit"]]]
-            | Iterable[Literal["panzoom", "fly", "trackball", "orbit"]]
+            Iterable[Iterable[Literal["panzoom", "fly", "trackball", "orbit"]]] | Iterable[Literal["panzoom", "fly", "trackball", "orbit"]] | None
         ) = None,
         controller_ids: (
-            Literal["sync"]
-            | Iterable[int]
-            | Iterable[Iterable[int]]
-            | Iterable[Iterable[str]]
+            Literal["sync"] | Iterable[int] | Iterable[Iterable[int]] | Iterable[Iterable[str]] | None
         ) = None,
         controllers: pygfx.Controller | Iterable[Iterable[pygfx.Controller]] = None,
         canvas: str | BaseRenderCanvas | pygfx.Texture = None,
         renderer: pygfx.WgpuRenderer = None,
-        canvas_kwargs: dict = None,
+        canvas_kwargs: dict | None = None,
         size: tuple[int, int] = (500, 300),
         names: list | np.ndarray = None,
         show_tooltips: bool = False,

@@ -28,8 +28,8 @@ class Figure:
     def __init__(
         self,
         shape: tuple[int, int] = (1, 1),
-        rects: list[tuple | np.ndarray] = None,
-        extents: list[tuple | np.ndarray] = None,
+        rects: list[tuple | np.ndarray] | None = None,
+        extents: list[tuple | np.ndarray] | None = None,
         cameras: (
             Literal["2d", "3d"]
             | Iterable[Iterable[Literal["2d", "3d"]]]
@@ -37,19 +37,15 @@ class Figure:
             | Iterable[Iterable[pygfx.PerspectiveCamera]]
         ) = "2d",
         controller_types: (
-            Iterable[Iterable[Literal["panzoom", "fly", "trackball", "orbit"]]]
-            | Iterable[Literal["panzoom", "fly", "trackball", "orbit"]]
+            Iterable[Iterable[Literal["panzoom", "fly", "trackball", "orbit"]]] | Iterable[Literal["panzoom", "fly", "trackball", "orbit"]] | None
         ) = None,
         controller_ids: (
-            Literal["sync"]
-            | Iterable[int]
-            | Iterable[Iterable[int]]
-            | Iterable[Iterable[str]]
+            Literal["sync"] | Iterable[int] | Iterable[Iterable[int]] | Iterable[Iterable[str]] | None
         ) = None,
         controllers: pygfx.Controller | Iterable[Iterable[pygfx.Controller]] = None,
         canvas: str | BaseRenderCanvas | pygfx.Texture = None,
         renderer: pygfx.WgpuRenderer = None,
-        canvas_kwargs: dict = None,
+        canvas_kwargs: dict | None = None,
         size: tuple[int, int] = (500, 300),
         names: list | np.ndarray = None,
         show_tooltips: bool = False,
@@ -350,7 +346,7 @@ class Figure:
                 controller_types
             ).flatten()
             # str controller_type or pygfx instances
-            valid_str = list(valid_controller_types.keys()) + ["default"]
+            valid_str = [*list(valid_controller_types.keys()), "default"]
 
             # make sure each controller type is valid
             for controller_type in controller_types:
@@ -591,10 +587,10 @@ class Figure:
     def show(
         self,
         autoscale: bool = True,
-        maintain_aspect: bool = None,
+        maintain_aspect: bool | None = None,
         axes_visible: bool = True,
         sidecar: bool = False,
-        sidecar_kwargs: dict = None,
+        sidecar_kwargs: dict | None = None,
     ):
         """
         Begins the rendering event loop and shows the Figure, returns the canvas
@@ -870,7 +866,7 @@ class Figure:
         extent=None,
         camera: str | pygfx.PerspectiveCamera = "2d",
         controller: str | pygfx.Controller = None,
-        name: str = None,
+        name: str | None = None,
     ) -> Subplot:
         if isinstance(self.layout, GridLayout):
             raise NotImplementedError(

@@ -97,8 +97,8 @@ def generate_class(
 
     underline = "=" * len(name)
 
-    methods_str = "\n    ".join([""] + methods)
-    properties_str = "\n    ".join([""] + properties)
+    methods_str = "\n    ".join(["", *methods])
+    properties_str = "\n    ".join(["", *properties])
 
     out = (
         f"{underline}\n"
@@ -267,7 +267,7 @@ def main():
 
     graphic_class_names = [g.__name__ for g in graphic_classes]
 
-    graphic_class_names_str = "\n    ".join([""] + graphic_class_names)
+    graphic_class_names_str = "\n    ".join(["", *graphic_class_names])
 
     # graphic classes index file
     with open(GRAPHICS_DIR.joinpath("index.rst"), "w") as f:
@@ -293,7 +293,7 @@ def main():
 
     feature_class_names = [f.__name__ for f in feature_classes]
 
-    feature_class_names_str = "\n    ".join([""] + feature_class_names)
+    feature_class_names_str = "\n    ".join(["", *feature_class_names])
 
     with open(GRAPHIC_FEATURES_DIR.joinpath("index.rst"), "w") as f:
         f.write(
@@ -318,7 +318,7 @@ def main():
 
     selector_class_names = [s.__name__ for s in selector_classes]
 
-    selector_class_names_str = "\n    ".join([""] + selector_class_names)
+    selector_class_names_str = "\n    ".join(["", *selector_class_names])
 
     with open(SELECTORS_DIR.joinpath("index.rst"), "w") as f:
         f.write(
@@ -344,7 +344,7 @@ def main():
 
     tools_class_names = [t.__name__ for t in tools_classes]
 
-    tools_class_names_str = "\n    ".join([""] + tools_class_names)
+    tools_class_names_str = "\n    ".join(["", *tools_class_names])
 
     with open(TOOLS_DIR.joinpath("index.rst"), "w") as f:
         f.write(
@@ -365,7 +365,7 @@ def main():
 
     widget_class_names = [w.__name__ for w in widget_classes]
 
-    widget_class_names_str = "\n    ".join([""] + widget_class_names)
+    widget_class_names_str = "\n    ".join(["", *widget_class_names])
 
     with open(WIDGETS_DIR.joinpath("index.rst"), "w") as f:
         f.write(
@@ -390,7 +390,7 @@ def main():
 
     ui_class_names = [cls.__name__ for cls in ui_classes]
 
-    ui_class_names_str = "\n    ".join([""] + ui_class_names)
+    ui_class_names_str = "\n    ".join(["", *ui_class_names])
 
     with open(UI_DIR.joinpath("index.rst"), "w") as f:
         f.write(

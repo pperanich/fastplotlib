@@ -227,7 +227,7 @@ class Tooltip:
         graphic: Graphic,
         appear_event: str = "pointer_move",
         disappear_event: str = "pointer_leave",
-        custom_info: callable = None,
+        custom_info: callable | None = None,
     ):
         """
         Register a Graphic to display tooltips.

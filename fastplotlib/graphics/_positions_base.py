@@ -9,7 +9,6 @@ from .features import (
     VertexColors,
     UniformColor,
     VertexCmap,
-    PointsSizesFeature,
     SizeSpace,
 )
 

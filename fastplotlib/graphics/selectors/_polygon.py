@@ -82,7 +82,7 @@ class PolygonSelector(BaseSelector):
         edge_thickness: float = 4,
         vertex_color=(0.7, 0.4, 0),
         vertex_size: float = 12,
-        name: str = None,
+        name: str | None = None,
     ):
         self._parent = parent
         self._resizable = bool(resizable)

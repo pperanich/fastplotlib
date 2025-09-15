@@ -171,5 +171,5 @@ class ColormapPicker(Popup):
 
         else:
             # popup went from open to closed
-            if self.is_open == True:
+            if self.is_open:
                 self.close()

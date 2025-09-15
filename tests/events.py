@@ -55,7 +55,7 @@ def test_positions_data_event(graphic: fpl.LineGraphic | fpl.ScatterGraphic):
         assert graphic._event_handlers["data"] == {handler}
 
         # make sure wrappers are correct
-        wrapper_map = tuple(graphic._event_handler_wrappers["data"])[0]
+        wrapper_map = next(iter(graphic._event_handler_wrappers["data"]))
         assert wrapper_map[0] is handler
         assert isinstance(wrapper_map[1], partial)
         assert wrapper_map[1].func == graphic._handle_event

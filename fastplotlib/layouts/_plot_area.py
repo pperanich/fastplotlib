@@ -34,7 +34,7 @@ class PlotArea(GraphicMethodsMixin):
         scene: pygfx.Scene,
         canvas: BaseRenderCanvas,
         renderer: pygfx.WgpuRenderer,
-        name: str = None,
+        name: str | None = None,
     ):
         """
         Base class for plot creation and management. ``PlotArea`` is not intended to be instantiated by users
@@ -425,7 +425,7 @@ class PlotArea(GraphicMethodsMixin):
         graphic: Graphic,
         center: bool = True,
         index: int = 0,
-        auto_offset: int = None,
+        auto_offset: int | None = None,
     ):
         """
         Insert graphic into scene at given position ``index`` in stored graphics.

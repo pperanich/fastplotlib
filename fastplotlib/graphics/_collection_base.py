@@ -185,7 +185,7 @@ class GraphicCollection(Graphic, CollectionProperties):
         super().__init_subclass__(**kwargs)
         cls._features = cls._child_type._features
 
-    def __init__(self, name: str = None, metadata: Any = None, **kwargs):
+    def __init__(self, name: str | None = None, metadata: Any = None, **kwargs):
         super().__init__(name=name, metadata=metadata, **kwargs)
 
         # list of mem locations of the graphics

@@ -23,7 +23,7 @@ class Subplot(PlotArea):
         extent: np.ndarray = None,
         resizeable: bool = True,
         renderer: pygfx.WgpuRenderer = None,
-        name: str = None,
+        name: str | None = None,
     ):
         """
         Subplot class.

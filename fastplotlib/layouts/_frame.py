@@ -37,7 +37,7 @@ Illustration:
 
 # wgsl shader snippet for SDF function that defines the resize handler, a lower right triangle.
 sdf_wgsl_resize_handle = """
-// hardcode square root of 2 
+// hardcode square root of 2
 let m_sqrt_2 = 1.4142135;
 
 // given a distance from an origin point, this defines the hypotenuse of a lower right triangle

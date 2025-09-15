@@ -80,7 +80,7 @@ class LinearSelector(BaseSelector):
         edge_color: str | Sequence[float] | np.ndarray = "w",
         thickness: float = 2.5,
         arrow_keys_modifier: str = "Shift",
-        name: str = None,
+        name: str | None = None,
     ):
         """
         Create a horizontal or vertical line that can be used to select a value along an axis.

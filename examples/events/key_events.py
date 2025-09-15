@@ -64,11 +64,11 @@ def handle_event(ev: pygfx.KeyboardEvent):
         case "ArrowUp":
             image.offset = image.offset + [0, -10, 0]  # remember y-axis is flipped for images
         case "ArrowDown":
-            image.offset = image.offset + [0, 10, 0]
+            image.offset = [*image.offset, 0, 10, 0]
         case "ArrowLeft":
-            image.offset = image.offset + [-10, 0, 0]
+            image.offset = [*image.offset, -10, 0, 0]
         case "ArrowRight":
-            image.offset = image.offset + [10, 0, 0]
+            image.offset = [*image.offset, 10, 0, 0]
 
 
 iw.show()

@@ -563,9 +563,9 @@ def _is_valid_diagonal(a, b):
         (a.next.i != b.i and a.prev.i != b.i and not _intersects_polygon(a, b))
         and (
             # locally visible
-            (_locally_inside(a, b) and _locally_inside(b, a) and _middle_inside(a, b))
+            ((_locally_inside(a, b) and _locally_inside(b, a) and _middle_inside(a, b))
             # does not create opposite-facing sectors
-            and (_area(a.prev, a, b.prev) or _area(a, b.prev, b))
+            and (_area(a.prev, a, b.prev) or _area(a, b.prev, b)))
             # special zero-length case
             or (
                 _equals(a, b)
@@ -743,7 +743,7 @@ def _remove_node(p):
 
 
 class _Node:
-    __slots__ = ["i", "x", "y", "prev", "next", "z", "prev_z", "next_z", "steiner"]
+    __slots__ = ["i", "next", "next_z", "prev", "prev_z", "steiner", "x", "y", "z"]
     i: int
     x: float
     y: float

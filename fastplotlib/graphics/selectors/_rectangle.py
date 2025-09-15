@@ -62,7 +62,7 @@ class RectangleSelector(BaseSelector):
         vertex_color=(0.7, 0.4, 0),
         vertex_size: float = 8,
         arrow_keys_modifier: str = "Shift",
-        name: str = None,
+        name: str | None = None,
     ):
         """
         Create a RectangleSelector graphic which can be used to select a rectangular region of data.

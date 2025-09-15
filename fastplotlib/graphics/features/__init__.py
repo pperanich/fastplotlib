@@ -41,7 +41,9 @@ from ._common import Name, Offset, Rotation, Visible, Deleted
 
 __all__ = [
     "Deleted",
+    "Deleted",
     "FontSize",
+    "GraphicFeatureEvent",
     "ImageCmap",
     "ImageCmapInterpolation",
     "ImageInterpolation",
@@ -67,6 +69,4 @@ __all__ = [
     "VertexColors",
     "VertexPositions",
     "Visible",
-    "Deleted",
-    "GraphicFeatureEvent",
 ]

@@ -38,7 +38,7 @@ class LineGraphic(PositionsGraphic):
         colors: str | np.ndarray | Sequence = "w",
         uniform_color: bool = False,
         alpha: float = 1.0,
-        cmap: str = None,
+        cmap: str | None = None,
         cmap_transform: np.ndarray | Sequence = None,
         isolated_buffer: bool = True,
         size_space: str = "screen",
@@ -138,7 +138,7 @@ class LineGraphic(PositionsGraphic):
         self._thickness.set_value(self, value)
 
     def add_linear_selector(
-        self, selection: float = None, axis: str = "x", **kwargs
+        self, selection: float | None = None, axis: str = "x", **kwargs
     ) -> LinearSelector:
         """
         Adds a :class:`.LinearSelector`.
@@ -181,13 +181,13 @@ class LineGraphic(PositionsGraphic):
         self._plot_area.add_graphic(selector, center=False)
 
         # place selector above this graphic
-        selector.offset = selector.offset + (0.0, 0.0, self.offset[-1] + 1)
+        selector.offset = (*selector.offset, 0.0, 0.0, self.offset[-1] + 1)
 
         return selector
 
     def add_linear_region_selector(
         self,
-        selection: tuple[float, float] = None,
+        selection: tuple[float, float] | None = None,
         padding: float = 0.0,
         axis: str = "x",
         **kwargs,
@@ -240,7 +240,7 @@ class LineGraphic(PositionsGraphic):
         self._plot_area.add_graphic(selector, center=False)
 
         # place selector below this graphic
-        selector.offset = selector.offset + (0.0, 0.0, self.offset[-1] - 1)
+        selector.offset = (*selector.offset, 0.0, 0.0, self.offset[-1] - 1)
 
         # PlotArea manages this for garbage collection etc. just like all other Graphics
         # so we should only work with a proxy on the user-end
@@ -248,7 +248,7 @@ class LineGraphic(PositionsGraphic):
 
     def add_rectangle_selector(
         self,
-        selection: tuple[float, float, float, float] = None,
+        selection: tuple[float, float, float, float] | None = None,
         **kwargs,
     ) -> RectangleSelector:
         """

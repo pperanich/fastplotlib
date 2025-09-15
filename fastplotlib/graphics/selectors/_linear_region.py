@@ -66,7 +66,7 @@ class LinearRegionSelector(BaseSelector):
         edge_color: str | Sequence[float] = (0.8, 0.6, 0),
         edge_thickness: float = 8,
         arrow_keys_modifier: str = "Shift",
-        name: str = None,
+        name: str | None = None,
     ):
         """
         Create a LinearRegionSelector graphic which can be moved only along either the x-axis or y-axis.

@@ -28,7 +28,7 @@ pos = (0, max(ys), 0)
 
 # create label for the peak
 text_peak = figure[0, 0].add_text(
-    f"peak  ",
+    "peak  ",
     font_size=20,
     anchor="bottom-right",
     offset=pos

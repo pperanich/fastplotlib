@@ -88,8 +88,8 @@ class ImageGraphic(Graphic):
     def __init__(
         self,
         data: Any,
-        vmin: int = None,
-        vmax: int = None,
+        vmin: int | None = None,
+        vmax: int | None = None,
         cmap: str = "plasma",
         interpolation: str = "nearest",
         cmap_interpolation: str = "linear",
@@ -267,7 +267,7 @@ class ImageGraphic(Graphic):
         self.vmax = vmax
 
     def add_linear_selector(
-        self, selection: int = None, axis: str = "x", **kwargs
+        self, selection: int | None = None, axis: str = "x", **kwargs
     ) -> LinearSelector:
         """
         Adds a :class:`.LinearSelector`.
@@ -315,13 +315,13 @@ class ImageGraphic(Graphic):
         self._plot_area.add_graphic(selector, center=False)
 
         # place selector above this graphic
-        selector.offset = selector.offset + (0.0, 0.0, self.offset[-1] + 1)
+        selector.offset = (*selector.offset, 0.0, 0.0, self.offset[-1] + 1)
 
         return selector
 
     def add_linear_region_selector(
         self,
-        selection: tuple[float, float] = None,
+        selection: tuple[float, float] | None = None,
         axis: str = "x",
         padding: float = 0.0,
         fill_color=(0, 0, 0.35, 0.2),
@@ -393,13 +393,13 @@ class ImageGraphic(Graphic):
         self._plot_area.add_graphic(selector, center=False)
 
         # place above this graphic
-        selector.offset = selector.offset + (0.0, 0.0, self.offset[-1] + 1)
+        selector.offset = (*selector.offset, 0.0, 0.0, self.offset[-1] + 1)
 
         return selector
 
     def add_rectangle_selector(
         self,
-        selection: tuple[float, float, float, float] = None,
+        selection: tuple[float, float, float, float] | None = None,
         fill_color=(0, 0, 0.35, 0.2),
         **kwargs,
     ) -> RectangleSelector:
@@ -438,7 +438,7 @@ class ImageGraphic(Graphic):
         self._plot_area.add_graphic(selector, center=False)
 
         # place above this graphic
-        selector.offset = selector.offset + (0.0, 0.0, self.offset[-1] + 1)
+        selector.offset = (*selector.offset, 0.0, 0.0, self.offset[-1] + 1)
 
         return selector
 
@@ -476,6 +476,6 @@ class ImageGraphic(Graphic):
         self._plot_area.add_graphic(selector, center=False)
 
         # place above this graphic
-        selector.offset = selector.offset + (0.0, 0.0, self.offset[-1] + 1)
+        selector.offset = (*selector.offset, 0.0, 0.0, self.offset[-1] + 1)
 
         return selector
