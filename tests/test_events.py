@@ -22,6 +22,15 @@ def make_scatter_graphic() -> fpl.ScatterGraphic:
     return fpl.ScatterGraphic(make_positions_data())
 
 
+def make_multi_line_graphic() -> fpl.MultiLineGraphic:
+    xs = np.linspace(0, 10 * np.pi, 10, dtype=np.float32)
+    ys = np.sin(xs).astype(np.float32)
+    data = np.stack(
+        [np.column_stack([xs, ys]), np.column_stack([xs, ys + 1.0])], axis=0
+    )
+    return fpl.MultiLineGraphic(data)
+
+
 event_instance: GraphicFeatureEvent = None
 
 
@@ -87,5 +96,26 @@ def test_positions_data_event(graphic: fpl.LineGraphic | fpl.ScatterGraphic):
     graphic.data[3:8, 1] = value
 
     validate(graphic, event_handler, expected, event_instance)
+
+    event_instance = None
+
+
+def test_multi_line_positions_data_event():
+    global event_instance
+
+    graphic = make_multi_line_graphic()
+
+    value = np.cos(np.linspace(0, 10 * np.pi, 10, dtype=np.float32))
+    value = value[None, :] + np.arange(2, dtype=np.float32)[:, None]
+
+    info = {"key": (slice(None), slice(None), 1), "value": value}
+    expected = GraphicFeatureEvent(type="data", info=info)
+
+    graphic.add_event_handler(event_handler, "data")
+    graphic.data[:, :, 1] = value
+
+    assert expected.type == event_instance.type
+    assert expected.info["key"] == event_instance.info["key"]
+    npt.assert_almost_equal(expected.info["value"], event_instance.info["value"])
 
     event_instance = None

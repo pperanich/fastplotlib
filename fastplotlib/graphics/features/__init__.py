@@ -3,6 +3,7 @@ from ._positions import (
     UniformColor,
     SizeSpace,
     VertexPositions,
+    MultiLinePositions,
     VertexCmap,
 )
 from ._mesh import (
@@ -71,7 +72,17 @@ from ._selection_features import (
     LinearRegionSelectionFeature,
     RectangleSelectionFeature,
 )
-from ._common import Name, Offset, Rotation, Scale, Alpha, AlphaMode, Visible, Deleted
+from ._common import (
+    Name,
+    Transform,
+    Offset,
+    Rotation,
+    Scale,
+    Alpha,
+    AlphaMode,
+    Visible,
+    Deleted,
+)
 
 
 __all__ = [
@@ -79,6 +90,7 @@ __all__ = [
     "UniformColor",
     "SizeSpace",
     "VertexPositions",
+    "MultiLinePositions",
     "VertexCmap",
     "MeshIndices",
     "MeshCmap",
@@ -117,6 +129,7 @@ __all__ = [
     "LinearRegionSelectionFeature",
     "RectangleSelectionFeature",
     "Name",
+    "Transform",
     "Offset",
     "Rotation",
     "Scale",

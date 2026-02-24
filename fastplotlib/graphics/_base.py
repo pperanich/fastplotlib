@@ -21,6 +21,7 @@ from .features import (
     BufferManager,
     Deleted,
     Name,
+    Transform,
     Offset,
     Rotation,
     Scale,
@@ -72,6 +73,7 @@ class Graphic:
         cls._features = {
             **cls._features,
             "name": Name,
+            "transform": Transform,
             "offset": Offset,
             "rotation": Rotation,
             "scale": Scale,
@@ -92,6 +94,7 @@ class Graphic:
         alpha_mode: str = "auto",
         visible: bool = True,
         metadata: Any = None,
+        transform: np.ndarray | None = None,
     ):
         """
 
@@ -150,9 +153,26 @@ class Graphic:
         metadata: Any, optional
             metadata attached to this Graphic, this is for the user to manage
 
+        transform: np.ndarray, optional
+            4x4 transform matrix. If provided, offset/rotation/scale must remain default.
+
         """
         if (name is not None) and (not isinstance(name, str)):
             raise TypeError("Graphic `name` must be of type <str>")
+
+        if transform is not None:
+            if not np.allclose(offset, (0.0, 0.0, 0.0)):
+                raise ValueError(
+                    "Cannot set `transform` and `offset` together; bake offset into the transform."
+                )
+            if not np.allclose(rotation, (0.0, 0.0, 0.0, 1.0)):
+                raise ValueError(
+                    "Cannot set `transform` and `rotation` together; bake rotation into the transform."
+                )
+            if not np.allclose(scale, (1.0, 1.0, 1.0)):
+                raise ValueError(
+                    "Cannot set `transform` and `scale` together; bake scale into the transform."
+                )
 
         self.metadata = metadata
         self.registered_callbacks = dict()
@@ -170,6 +190,8 @@ class Graphic:
 
         # all the common features
         self._name = Name(name)
+        self._transform_is_manual = False
+        self._transform = Transform(transform)
         self._deleted = Deleted(False)
         self._rotation = Rotation(rotation)
         self._scale = Scale(scale)
@@ -201,6 +223,15 @@ class Graphic:
     @name.setter
     def name(self, value: str):
         self._name.set_value(self, value)
+
+    @property
+    def transform(self) -> np.ndarray | None:
+        """Get or set the transform matrix."""
+        return self._transform.value
+
+    @transform.setter
+    def transform(self, value: np.ndarray | None):
+        self._transform.set_value(self, value)
 
     @property
     def offset(self) -> np.ndarray:
@@ -321,6 +352,9 @@ class Graphic:
         # set scale if it's not (1, 1, 1)
         if not all(wo.world.scale == self.scale):
             self.scale = self.scale
+
+        if self._transform.value is not None:
+            self.transform = self._transform.value
 
     @property
     def tooltip_format(self) -> Callable[[dict], str] | None:

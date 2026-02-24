@@ -1,4 +1,5 @@
 from typing import Any, Sequence
+from warnings import warn
 
 import numpy as np
 import pygfx
@@ -278,6 +279,161 @@ class VertexPositions(BufferManager):
 
     def __len__(self):
         return len(self.buffer.data)
+
+
+class MultiLinePositions(BufferManager):
+    event_info_spec = [
+        {
+            "dict key": "key",
+            "type": "slice, index (int) or numpy-like fancy index",
+            "description": "key at which multi-line positions data were indexed/sliced",
+        },
+        {
+            "dict key": "value",
+            "type": "int | float | array-like",
+            "description": "new data values for points that were changed",
+        },
+    ]
+
+    def __init__(
+        self, data: Any, isolated_buffer: bool = True, property_name: str = "data"
+    ):
+        parsed = self._parse_input(data)
+        in_data, mode, n_lines, n_points = parsed
+        self._n_lines = n_lines
+        self._n_points = n_points
+
+        out_dtype = in_data.dtype
+        if out_dtype != np.float32:
+            warn(f"casting {out_dtype} array to float32")
+            out_dtype = np.float32
+
+        packed = np.empty(
+            (self._n_lines, self._n_points + 1, 3), dtype=out_dtype
+        )
+        self._fill_packed(packed[:, :-1, :], in_data, mode)
+        packed[:, self._n_points, :] = np.nan
+
+        flat = packed.reshape(-1, 3)
+        super().__init__(
+            flat, isolated_buffer=False, property_name=property_name
+        )
+
+        self._data_3d = self._buffer.data.reshape(self._n_lines, self._n_points + 1, 3)
+        self._data_view = self._data_3d[:, :-1, :]
+        self._data_3d[:, -1, :] = np.nan
+
+    @staticmethod
+    def _parse_input(data):
+        data = np.asarray(data)
+
+        if data.dtype == object:
+            raise ValueError(
+                "MultiLine data must be a rectangular array with the same number of points per line"
+            )
+
+        if data.ndim == 1:
+            return data, "single_y", 1, data.shape[0]
+
+        if data.ndim == 2:
+            if data.shape[1] in (2, 3):
+                mode = "single_xyz" if data.shape[1] == 3 else "single_xy"
+                return data, mode, 1, data.shape[0]
+            return data, "multi_y", data.shape[0], data.shape[1]
+
+        if data.ndim != 3:
+            raise ValueError("MultiLine data must be 1D, 2D, or 3D")
+
+        if data.shape[2] not in (2, 3):
+            raise ValueError("MultiLine data last dimension must be 2 or 3")
+
+        mode = "multi_xyz" if data.shape[2] == 3 else "multi_xy"
+        return data, mode, data.shape[0], data.shape[1]
+
+    def _fill_packed(self, packed, in_data, mode):
+        if mode == "single_y":
+            n_points = packed.shape[1]
+            packed[0, :, 0] = np.arange(n_points, dtype=packed.dtype)
+            packed[0, :, 1] = in_data
+            packed[0, :, 2] = 0.0
+            return
+
+        if mode == "multi_y":
+            n_points = packed.shape[1]
+            packed[:, :, 0] = np.arange(n_points, dtype=packed.dtype)[None, :]
+            packed[:, :, 1] = in_data
+            packed[:, :, 2] = 0.0
+            return
+
+        if mode in ("single_xy", "multi_xy"):
+            packed[:, :, 0] = in_data[..., 0]
+            packed[:, :, 1] = in_data[..., 1]
+            packed[:, :, 2] = 0.0
+            return
+
+        if mode in ("single_xyz", "multi_xyz"):
+            packed[:, :, :] = in_data
+            return
+
+        raise ValueError(f"Unknown MultiLine input mode: {mode}")
+
+    @property
+    def value(self) -> np.ndarray:
+        return self._data_view
+
+    @property
+    def n_lines(self) -> int:
+        return self._n_lines
+
+    @property
+    def n_points(self) -> int:
+        return self._n_points
+
+    @property
+    def flat_value(self) -> np.ndarray:
+        return self._buffer.data
+
+    @block_reentrance
+    def __setitem__(
+        self,
+        key: int | slice | np.ndarray[int | bool] | tuple[slice, ...],
+        value: np.ndarray | float | list[float],
+    ):
+        if self._is_full_slice(key):
+            parsed = self._parse_input(value)
+            in_data, mode, n_lines, n_points = parsed
+
+            if (n_lines, n_points) != (self._n_lines, self._n_points):
+                raise ValueError(
+                    "Full data assignment must match (n_lines, n_points, 3) shape"
+                )
+
+            self._fill_packed(self._data_3d[:, :-1, :], in_data, mode)
+            self._data_3d[:, -1, :] = np.nan
+        else:
+            self._data_view[key] = value
+
+        self.buffer.update_full()
+        self._emit_event(self._property_name, key, value)
+
+    def __getitem__(self, item):
+        return self._data_view[item]
+
+    def __len__(self):
+        return self._n_lines
+
+    @staticmethod
+    def _is_full_slice(key) -> bool:
+        if key == slice(None):
+            return True
+
+        if not isinstance(key, tuple):
+            return False
+
+        if any(k is Ellipsis for k in key):
+            return False
+
+        return all(k == slice(None) for k in key)
 
 
 class VertexCmap(BufferManager):
