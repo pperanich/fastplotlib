@@ -34,7 +34,7 @@ class GraphicMethodsMixin:
         interpolation: str = "nearest",
         cmap_interpolation: str = "linear",
         isolated_buffer: bool = True,
-        **kwargs,
+        **kwargs
     ) -> ImageGraphic:
         """
 
@@ -82,7 +82,7 @@ class GraphicMethodsMixin:
             interpolation,
             cmap_interpolation,
             isolated_buffer,
-            **kwargs,
+            **kwargs
         )
 
     def add_image_volume(
@@ -101,7 +101,7 @@ class GraphicMethodsMixin:
         emissive: str | tuple | numpy.ndarray = (0, 0, 0),
         shininess: int = 30,
         isolated_buffer: bool = True,
-        **kwargs,
+        **kwargs
     ) -> ImageVolumeGraphic:
         """
 
@@ -184,7 +184,7 @@ class GraphicMethodsMixin:
             emissive,
             shininess,
             isolated_buffer,
-            **kwargs,
+            **kwargs
         )
 
     def add_line_collection(
@@ -201,7 +201,7 @@ class GraphicMethodsMixin:
         metadatas: Union[Sequence[Any], numpy.ndarray] = None,
         isolated_buffer: bool = True,
         kwargs_lines: list[dict] = None,
-        **kwargs,
+        **kwargs
     ) -> LineCollection:
         """
 
@@ -270,7 +270,7 @@ class GraphicMethodsMixin:
             metadatas,
             isolated_buffer,
             kwargs_lines,
-            **kwargs,
+            **kwargs
         )
 
     def add_line(
@@ -283,7 +283,7 @@ class GraphicMethodsMixin:
         cmap_transform: Union[numpy.ndarray, Sequence] = None,
         isolated_buffer: bool = True,
         size_space: str = "screen",
-        **kwargs,
+        **kwargs
     ) -> LineGraphic:
         """
 
@@ -334,71 +334,7 @@ class GraphicMethodsMixin:
             cmap_transform,
             isolated_buffer,
             size_space,
-            **kwargs,
-        )
-
-    def add_multi_line(
-        self,
-        data: Any,
-        thickness: float = 2.0,
-        colors: Union[str, numpy.ndarray, Sequence] = "w",
-        uniform_color: bool = False,
-        cmap: str = None,
-        cmap_transform: Union[numpy.ndarray, Sequence] = None,
-        z_offset_scale: float = None,
-        isolated_buffer: bool = True,
-        size_space: str = "screen",
-        **kwargs,
-    ) -> MultiLineGraphic:
-        """
-        Create a multi-line Graphic backed by a single buffer.
-
-        Parameters
-        ----------
-        data: array-like
-            Multi-line data to plot. Accepts:
-            - 1D array for a single line (y-values, x generated)
-            - 2D array [n_lines, n_points] for y-values (x generated)
-            - 3D array [n_lines, n_points, 2|3] for explicit x/y[/z]
-
-        thickness: float, optional, default 2.0
-            thickness of the line
-
-        colors: str, array, or iterable, default "w"
-            specify colors as a single human-readable string, a single RGBA array,
-            or a Sequence (array, tuple, or list) of strings or RGBA arrays
-
-        uniform_color: bool, default ``False``
-            if True, uses a uniform buffer for the line color
-
-        cmap: str, optional
-            Apply a colormap to the line instead of assigning colors manually
-
-        cmap_transform: 1D array-like of numerical values, optional
-            if provided, these values are used to map the colors from the cmap
-
-        z_offset_scale: float, optional
-            if provided, applies a shear transform so that y' = y + z * z_offset_scale.
-            This treats the z coordinate as a per-vertex y-offset and is intended for 2D use.
-
-        size_space: str, default "screen"
-            coordinate space in which the thickness is expressed ("screen", "world", "model")
-
-        **kwargs
-            passed to :class:`.Graphic`
-        """
-        return self._create_graphic(
-            MultiLineGraphic,
-            data,
-            thickness,
-            colors,
-            uniform_color,
-            cmap,
-            cmap_transform,
-            z_offset_scale,
-            isolated_buffer,
-            size_space,
-            **kwargs,
+            **kwargs
         )
 
     def add_line_stack(
@@ -416,7 +352,7 @@ class GraphicMethodsMixin:
         separation: float = 10.0,
         separation_axis: str = "y",
         kwargs_lines: list[dict] = None,
-        **kwargs,
+        **kwargs
     ) -> LineStack:
         """
 
@@ -493,7 +429,7 @@ class GraphicMethodsMixin:
             separation,
             separation_axis,
             kwargs_lines,
-            **kwargs,
+            **kwargs
         )
 
     def add_mesh(
@@ -513,7 +449,7 @@ class GraphicMethodsMixin:
         ) = None,
         clim: tuple[float, float] = None,
         isolated_buffer: bool = True,
-        **kwargs,
+        **kwargs
     ) -> MeshGraphic:
         """
 
@@ -574,7 +510,73 @@ class GraphicMethodsMixin:
             cmap,
             clim,
             isolated_buffer,
-            **kwargs,
+            **kwargs
+        )
+
+    def add_multi_line(
+        self,
+        data: Any,
+        thickness: float = 2.0,
+        colors: Union[str, numpy.ndarray, Sequence] = "w",
+        uniform_color: bool = False,
+        cmap: str = None,
+        cmap_transform: Union[numpy.ndarray, Sequence] = None,
+        z_offset_scale: float | None = None,
+        isolated_buffer: bool = True,
+        size_space: str = "screen",
+        **kwargs
+    ) -> MultiLineGraphic:
+        """
+
+        Create a multi-line Graphic backed by a single positions buffer.
+
+        Parameters
+        ----------
+        data: array-like
+            Multi-line data to plot. Accepts:
+            - 1D array for a single line (y-values, x generated)
+            - 2D array [n_lines, n_points] for y-values (x generated)
+            - 3D array [n_lines, n_points, 2|3] for explicit x/y[/z]
+
+        thickness: float, optional, default 2.0
+            thickness of the line
+
+        colors: str, array, or iterable, default "w"
+            specify colors as a single human-readable string, a single RGBA array,
+            or a Sequence (array, tuple, or list) of strings or RGBA arrays
+
+        uniform_color: bool, default ``False``
+            if True, uses a uniform buffer for the line color
+
+        cmap: str, optional
+            Apply a colormap to the line instead of assigning colors manually
+
+        cmap_transform: 1D array-like of numerical values, optional
+            if provided, these values are used to map the colors from the cmap
+
+        z_offset_scale: float, optional
+            if provided, applies a shear transform so that y' = y + z * z_offset_scale.
+            This treats the z coordinate as a per-vertex y-offset and is intended for 2D use.
+
+        size_space: str, default "screen"
+            coordinate space in which the thickness is expressed ("screen", "world", "model")
+
+        **kwargs
+            passed to :class:`.Graphic`
+
+        """
+        return self._create_graphic(
+            MultiLineGraphic,
+            data,
+            thickness,
+            colors,
+            uniform_color,
+            cmap,
+            cmap_transform,
+            z_offset_scale,
+            isolated_buffer,
+            size_space,
+            **kwargs
         )
 
     def add_polygon(
@@ -591,7 +593,7 @@ class GraphicMethodsMixin:
             | numpy.ndarray
         ) = None,
         clim: tuple[float, float] | None = None,
-        **kwargs,
+        **kwargs
     ) -> PolygonGraphic:
         """
 
@@ -657,7 +659,7 @@ class GraphicMethodsMixin:
         uniform_size: bool = False,
         size_space: str = "screen",
         isolated_buffer: bool = True,
-        **kwargs,
+        **kwargs
     ) -> ScatterGraphic:
         """
 
@@ -785,7 +787,7 @@ class GraphicMethodsMixin:
             uniform_size,
             size_space,
             isolated_buffer,
-            **kwargs,
+            **kwargs
         )
 
     def add_surface(
@@ -802,7 +804,7 @@ class GraphicMethodsMixin:
             | numpy.ndarray
         ) = None,
         clim: tuple[float, float] | None = None,
-        **kwargs,
+        **kwargs
     ) -> SurfaceGraphic:
         """
 
@@ -856,7 +858,7 @@ class GraphicMethodsMixin:
         screen_space: bool = True,
         offset: tuple[float] = (0, 0, 0),
         anchor: str = "middle-center",
-        **kwargs,
+        **kwargs
     ) -> TextGraphic:
         """
 
@@ -907,7 +909,7 @@ class GraphicMethodsMixin:
             screen_space,
             offset,
             anchor,
-            **kwargs,
+            **kwargs
         )
 
     def add_vectors(
@@ -917,7 +919,7 @@ class GraphicMethodsMixin:
         color: Union[str, Sequence[float], numpy.ndarray] = "w",
         size: float = None,
         vector_shape_options: dict = None,
-        **kwargs,
+        **kwargs
     ) -> VectorsGraphic:
         """
 
@@ -962,5 +964,5 @@ class GraphicMethodsMixin:
             color,
             size,
             vector_shape_options,
-            **kwargs,
+            **kwargs
         )

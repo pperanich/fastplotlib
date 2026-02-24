@@ -12,9 +12,7 @@ def test_multiline_positions_y_only():
     assert positions.n_points == 5
     assert positions.value.shape == (4, 5, 3)
 
-    expected_x = np.broadcast_to(
-        np.arange(5, dtype=np.float32)[None, :], (4, 5)
-    )
+    expected_x = np.broadcast_to(np.arange(5, dtype=np.float32)[None, :], (4, 5))
     npt.assert_almost_equal(positions.value[:, :, 0], expected_x)
     npt.assert_almost_equal(positions.value[:, :, 1], data)
     npt.assert_almost_equal(positions.value[:, :, 2], 0.0)
@@ -24,20 +22,19 @@ def test_multiline_positions_y_only():
     assert np.shares_memory(positions.value, positions.flat_value)
 
 
-def test_multiline_positions_xy_single_line():
-    xs = np.linspace(0, 1, 6, dtype=np.float32)
-    ys = np.sin(xs).astype(np.float32)
-    data = np.column_stack([xs, ys])
+def test_multiline_positions_2d_small_shape_is_multi_y():
+    data = np.array([[1.0, 2.0], [3.0, 4.0]], dtype=np.float32)
 
     positions = MultiLinePositions(data)
 
-    assert positions.n_lines == 1
-    assert positions.n_points == 6
-    assert positions.value.shape == (1, 6, 3)
+    assert positions.n_lines == 2
+    assert positions.n_points == 2
+    assert positions.value.shape == (2, 2, 3)
 
-    npt.assert_almost_equal(positions.value[0, :, 0], xs)
-    npt.assert_almost_equal(positions.value[0, :, 1], ys)
-    npt.assert_almost_equal(positions.value[0, :, 2], 0.0)
+    expected_x = np.array([[0.0, 1.0], [0.0, 1.0]], dtype=np.float32)
+    npt.assert_almost_equal(positions.value[:, :, 0], expected_x)
+    npt.assert_almost_equal(positions.value[:, :, 1], data)
+    npt.assert_almost_equal(positions.value[:, :, 2], 0.0)
 
 
 def test_multiline_positions_xyz_multi_line():
@@ -51,3 +48,19 @@ def test_multiline_positions_xyz_multi_line():
 
     packed = positions.flat_value.reshape(3, 5, 3)
     assert np.isnan(packed[:, -1, :]).all()
+
+
+def test_multiline_positions_xy_single_line_uses_3d_input():
+    xs = np.linspace(0, 1, 6, dtype=np.float32)
+    ys = np.sin(xs).astype(np.float32)
+    data = np.column_stack([xs, ys])[None, :, :]
+
+    positions = MultiLinePositions(data)
+
+    assert positions.n_lines == 1
+    assert positions.n_points == 6
+    assert positions.value.shape == (1, 6, 3)
+
+    npt.assert_almost_equal(positions.value[0, :, 0], xs)
+    npt.assert_almost_equal(positions.value[0, :, 1], ys)
+    npt.assert_almost_equal(positions.value[0, :, 2], 0.0)

@@ -34,58 +34,6 @@ class Name(GraphicFeature):
         self._call_event_handlers(event)
 
 
-def _ensure_no_transform(graphic, feature_name: str):
-    if getattr(graphic, "_transform_is_manual", False):
-        raise RuntimeError(
-            f"Cannot set {feature_name} when `graphic.transform` is set. "
-            "Apply the change to the transform matrix instead."
-        )
-
-
-class Transform(GraphicFeature):
-    event_info_spec = [
-        {
-            "dict key": "value",
-            "type": "np.ndarray[4,4] | None",
-            "description": "new transform matrix",
-        },
-    ]
-
-    def __init__(self, value: np.ndarray | None, property_name: str = "transform"):
-        self._value = None
-        if value is not None:
-            self._value = self._validate(value)
-        super().__init__(property_name=property_name)
-
-    @staticmethod
-    def _validate(value) -> np.ndarray:
-        value = np.asarray(value, dtype=np.float32)
-        if value.shape != (4, 4):
-            raise ValueError("transform must be a 4x4 matrix")
-        return value
-
-    @property
-    def value(self) -> np.ndarray | None:
-        return self._value
-
-    @block_reentrance
-    def set_value(self, graphic, value: np.ndarray | None):
-        if value is None:
-            graphic._transform_is_manual = False
-            graphic.world_object.local.state_basis = "components"
-            graphic.world_object.local.matrix = np.eye(4, dtype=np.float32)
-            self._value = None
-        else:
-            value = self._validate(value)
-            graphic._transform_is_manual = True
-            graphic.world_object.local.state_basis = "matrix"
-            graphic.world_object.local.matrix = value
-            self._value = value.copy()
-
-        event = GraphicFeatureEvent(type=self._property_name, info={"value": value})
-        self._call_event_handlers(event)
-
-
 class Offset(GraphicFeature):
     event_info_spec = [
         {
@@ -118,7 +66,6 @@ class Offset(GraphicFeature):
 
     @block_reentrance
     def set_value(self, graphic, value: np.ndarray | Sequence[float]):
-        _ensure_no_transform(graphic, "offset")
         self._validate(value)
         value = np.asarray(value)
 
@@ -167,7 +114,6 @@ class Rotation(GraphicFeature):
 
     @block_reentrance
     def set_value(self, graphic, value: np.ndarray | Sequence[float]):
-        _ensure_no_transform(graphic, "rotation")
         self._validate(value)
         value = np.asarray(value)
 
@@ -217,7 +163,6 @@ class Scale(GraphicFeature):
 
     @block_reentrance
     def set_value(self, graphic, value: np.ndarray | Sequence[float]):
-        _ensure_no_transform(graphic, "scale")
         self._validate(value)
 
         if len(value) == 2:

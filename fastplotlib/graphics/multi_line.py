@@ -1,4 +1,5 @@
 from typing import Any, Sequence
+from types import SimpleNamespace
 
 import numpy as np
 import pygfx
@@ -164,24 +165,39 @@ class MultiLineGraphic(Graphic):
                 positions=self._data.buffer, colors=self._colors.buffer
             )
 
-        world_object: pygfx.Line = pygfx.Line(geometry=geometry, material=material)
-        self._set_world_object(world_object)
+        line_world_object: pygfx.Line = pygfx.Line(geometry=geometry, material=material)
+        self._line_world_object = line_world_object
+        self._feature_target = SimpleNamespace(world_object=self._line_world_object)
 
         self._z_offset_scale = z_offset_scale
         if z_offset_scale not in (None, 0.0):
             self._apply_z_offset_shear(z_offset_scale)
 
+        world_object = pygfx.Group()
+        world_object.add(line_world_object)
+        self._set_world_object(world_object)
+        self._line_world_object.material.opacity = self.alpha
+        self._line_world_object.material.alpha_mode = self.alpha_mode
+
     def _apply_z_offset_shear(self, scale: float):
         shear = np.eye(4, dtype=np.float32)
         shear[1, 2] = float(scale)
-        self.transform = shear @ self.world_object.local.matrix
+        self._line_world_object.local.state_basis = "matrix"
+        self._line_world_object.local.matrix = (
+            shear @ self._line_world_object.local.matrix
+        )
 
     @staticmethod
     def _expand_line_colors(colors, n_lines: int, n_points: int):
         if isinstance(colors, np.ndarray):
-            if colors.ndim == 2 and colors.shape[0] == n_lines and colors.shape[1] in (
-                3,
-                4,
+            if (
+                colors.ndim == 2
+                and colors.shape[0] == n_lines
+                and colors.shape[1]
+                in (
+                    3,
+                    4,
+                )
             ):
                 line_colors = colors
             else:
@@ -227,7 +243,7 @@ class MultiLineGraphic(Graphic):
             return
 
         if isinstance(self._colors, UniformColor):
-            self._colors.set_value(self, value)
+            self._colors.set_value(self._feature_target, value)
             return
 
         raise RuntimeError("Unknown colors type on MultiLineGraphic")
@@ -255,7 +271,7 @@ class MultiLineGraphic(Graphic):
 
     @size_space.setter
     def size_space(self, value: str):
-        self._size_space.set_value(self, value)
+        self._size_space.set_value(self._feature_target, value)
 
     @property
     def thickness(self) -> float:
@@ -264,7 +280,23 @@ class MultiLineGraphic(Graphic):
 
     @thickness.setter
     def thickness(self, value: float):
-        self._thickness.set_value(self, value)
+        self._thickness.set_value(self._feature_target, value)
+
+    @property
+    def alpha(self) -> float:
+        return self._alpha.value
+
+    @alpha.setter
+    def alpha(self, value: float):
+        self._alpha.set_value(self._feature_target, value)
+
+    @property
+    def alpha_mode(self) -> str:
+        return self._alpha_mode.value
+
+    @alpha_mode.setter
+    def alpha_mode(self, value: str):
+        self._alpha_mode.set_value(self._feature_target, value)
 
     @property
     def n_lines(self) -> int:

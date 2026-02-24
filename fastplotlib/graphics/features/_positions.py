@@ -308,15 +308,13 @@ class MultiLinePositions(BufferManager):
             warn(f"casting {out_dtype} array to float32")
             out_dtype = np.float32
 
-        packed = np.empty(
-            (self._n_lines, self._n_points + 1, 3), dtype=out_dtype
-        )
+        packed = np.empty((self._n_lines, self._n_points + 1, 3), dtype=out_dtype)
         self._fill_packed(packed[:, :-1, :], in_data, mode)
         packed[:, self._n_points, :] = np.nan
 
         flat = packed.reshape(-1, 3)
         super().__init__(
-            flat, isolated_buffer=False, property_name=property_name
+            flat, isolated_buffer=isolated_buffer, property_name=property_name
         )
 
         self._data_3d = self._buffer.data.reshape(self._n_lines, self._n_points + 1, 3)
@@ -336,9 +334,6 @@ class MultiLinePositions(BufferManager):
             return data, "single_y", 1, data.shape[0]
 
         if data.ndim == 2:
-            if data.shape[1] in (2, 3):
-                mode = "single_xyz" if data.shape[1] == 3 else "single_xy"
-                return data, mode, 1, data.shape[0]
             return data, "multi_y", data.shape[0], data.shape[1]
 
         if data.ndim != 3:
@@ -405,7 +400,7 @@ class MultiLinePositions(BufferManager):
 
             if (n_lines, n_points) != (self._n_lines, self._n_points):
                 raise ValueError(
-                    "Full data assignment must match (n_lines, n_points, 3) shape"
+                    "Full data assignment must match existing n_lines and n_points."
                 )
 
             self._fill_packed(self._data_3d[:, :-1, :], in_data, mode)

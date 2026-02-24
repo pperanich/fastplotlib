@@ -22,9 +22,12 @@ def test_multi_line_graphic_buffer_and_update():
     fig = fpl.Figure()
 
     graphic = fig[0, 0].add_multi_line(data)
+    line = graphic.world_object.children[0]
 
     assert isinstance(graphic.data, MultiLinePositions)
-    assert graphic.world_object.geometry.positions is graphic.data.buffer
+    assert isinstance(graphic.world_object, pygfx.Group)
+    assert isinstance(line, pygfx.Line)
+    assert line.geometry.positions is graphic.data.buffer
     assert graphic.data.value.shape == (graphic.n_lines, graphic.n_points, 3)
     npt.assert_almost_equal(graphic.data.value[:, :, :2], data)
     npt.assert_almost_equal(graphic.data.value[:, :, 2], 0.0)
@@ -33,9 +36,7 @@ def test_multi_line_graphic_buffer_and_update():
     graphic.data[:, :, 1] = new_y
     npt.assert_almost_equal(graphic.data.value[:, :, 1], new_y)
 
-    packed = graphic.data.flat_value.reshape(
-        graphic.n_lines, graphic.n_points + 1, 3
-    )
+    packed = graphic.data.flat_value.reshape(graphic.n_lines, graphic.n_points + 1, 3)
     assert np.isnan(packed[:, -1, :]).all()
 
 
@@ -53,9 +54,9 @@ def test_multi_line_graphic_colors_per_line():
     )
 
     line_colors = np.array([pygfx.Color(c) for c in colors], dtype=np.float32)
-    expected = np.repeat(
-        line_colors[:, None, :], graphic.n_points + 1, axis=1
-    ).reshape(-1, 4)
+    expected = np.repeat(line_colors[:, None, :], graphic.n_points + 1, axis=1).reshape(
+        -1, 4
+    )
     npt.assert_almost_equal(graphic.colors.value, expected)
 
 
@@ -74,6 +75,40 @@ def test_multi_line_z_offset_shear():
 
     fig = fpl.Figure()
     graphic = fig[0, 0].add_multi_line(data, z_offset_scale=1.0)
+    line = graphic.world_object.children[0]
 
-    assert la.mat_has_shear(graphic.world_object.local.matrix)
-    npt.assert_almost_equal(graphic.world_object.local.matrix[1, 2], 1.0)
+    assert la.mat_has_shear(line.local.matrix)
+    npt.assert_almost_equal(line.local.matrix[1, 2], 1.0)
+
+
+def test_multi_line_z_offset_does_not_block_parent_offset():
+    data = make_data()
+    data = np.pad(data, ((0, 0), (0, 0), (0, 1)), mode="constant")
+    data[:, :, 2] = np.linspace(0, 1, data.shape[0], dtype=np.float32)[:, None]
+
+    fig = fpl.Figure()
+    graphic = fig[0, 0].add_multi_line(data, z_offset_scale=1.0)
+
+    graphic.offset = (1.0, 2.0, 3.0)
+
+    npt.assert_almost_equal(graphic.offset, (1.0, 2.0, 3.0))
+    npt.assert_almost_equal(graphic.world_object.world.position, (1.0, 2.0, 3.0))
+
+
+def test_multi_line_group_material_features():
+    data = make_data()
+    fig = fpl.Figure()
+    graphic = fig[0, 0].add_multi_line(data, uniform_color=True, colors="w")
+    line = graphic.world_object.children[0]
+
+    graphic.alpha = 0.4
+    graphic.thickness = 3.5
+    graphic.size_space = "world"
+    graphic.colors = "r"
+
+    npt.assert_almost_equal(line.material.opacity, 0.4)
+    npt.assert_almost_equal(line.material.thickness, 3.5)
+    assert line.material.thickness_space == "world"
+    npt.assert_almost_equal(
+        np.asarray(line.material.color), np.asarray(pygfx.Color("r"))
+    )
