@@ -524,6 +524,9 @@ class GraphicMethodsMixin:
         z_offset_scale: float | None = None,
         isolated_buffer: bool = True,
         size_space: str = "screen",
+        scroll: bool = False,
+        scroll_head: int = 0,
+        scroll_n_valid: int | None = None,
         **kwargs
     ) -> MultiLineGraphic:
         """
@@ -561,6 +564,15 @@ class GraphicMethodsMixin:
         size_space: str, default "screen"
             coordinate space in which the thickness is expressed ("screen", "world", "model")
 
+        scroll: bool, default False
+            enable ring-buffered scrolling mode
+
+        scroll_head: int, default 0
+            starting ring-buffer origin index for scrolling mode
+
+        scroll_n_valid: int, optional
+            number of valid ring-buffer samples for startup/blank-left behavior
+
         **kwargs
             passed to :class:`.Graphic`
 
@@ -576,6 +588,9 @@ class GraphicMethodsMixin:
             z_offset_scale,
             isolated_buffer,
             size_space,
+            scroll,
+            scroll_head,
+            scroll_n_valid,
             **kwargs
         )
 

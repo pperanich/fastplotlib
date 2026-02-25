@@ -320,6 +320,15 @@ class MultiLinePositions(BufferManager):
         self._data_3d = self._buffer.data.reshape(self._n_lines, self._n_points + 1, 3)
         self._data_view = self._data_3d[:, :-1, :]
         self._data_3d[:, -1, :] = np.nan
+        self._x_values_shared = None
+        self._update_x_values_shared()
+
+    def _update_x_values_shared(self) -> None:
+        xs = self._data_view[:, :, 0]
+        if np.allclose(xs, xs[0][None, :], equal_nan=False):
+            self._x_values_shared = xs[0].copy()
+        else:
+            self._x_values_shared = None
 
     @staticmethod
     def _parse_input(data):
@@ -388,6 +397,11 @@ class MultiLinePositions(BufferManager):
     def flat_value(self) -> np.ndarray:
         return self._buffer.data
 
+    @property
+    def x_values_shared(self) -> np.ndarray | None:
+        """Shared x-values used by all lines, if available."""
+        return self._x_values_shared
+
     @block_reentrance
     def __setitem__(
         self,
@@ -405,6 +419,7 @@ class MultiLinePositions(BufferManager):
 
             self._fill_packed(self._data_3d[:, :-1, :], in_data, mode)
             self._data_3d[:, -1, :] = np.nan
+            self._update_x_values_shared()
         else:
             self._data_view[key] = value
 
@@ -416,6 +431,38 @@ class MultiLinePositions(BufferManager):
 
     def __len__(self):
         return self._n_lines
+
+    def mark_point_ranges_dirty(self, segments: list[tuple[int, int]]):
+        """
+        Mark point segments as dirty for GPU upload.
+
+        Parameters
+        ----------
+        segments:
+            List of ``(start, count)`` point ranges in ``[0, n_points)``.
+            These are applied for every line in the packed multiline buffer.
+        """
+        if not segments:
+            return
+
+        stride = self._n_points + 1
+        n_points = self._n_points
+
+        for start, count in segments:
+            if count <= 0:
+                continue
+            if start < 0 or start >= n_points:
+                raise ValueError("point start out of range for MultiLinePositions")
+            if start + count > n_points:
+                raise ValueError("point range exceeds n_points in MultiLinePositions")
+
+            for line_i in range(self._n_lines):
+                offset = line_i * stride + start
+                self.buffer.update_range(offset=offset, size=count)
+
+    def update_columns(self, segments: list[tuple[int, int]]):
+        # Backwards compat for earlier internal naming; use point terminology.
+        self.mark_point_ranges_dirty(segments)
 
     @staticmethod
     def _is_full_slice(key) -> bool:
