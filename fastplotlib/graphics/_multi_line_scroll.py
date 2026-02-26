@@ -15,17 +15,22 @@ class MultiLineScrollMaterial(pygfx.LineMaterial):
         scroll_enabled="i4",
         scroll_head="i4",
         scroll_n_points="i4",
+        scroll_n_lines="i4",
         scroll_n_valid="i4",
+        scroll_use_shared_x="i4",
     )
 
     def __init__(
         self,
         *,
         scroll_x: np.ndarray,
+        scroll_y: np.ndarray | Buffer,
         scroll_n_points: int,
+        scroll_n_lines: int,
         scroll_enabled: bool = True,
         scroll_head: int = 0,
         scroll_n_valid: int | None = None,
+        scroll_use_shared_x: bool = True,
         **kwargs,
     ):
         super().__init__(**kwargs)
@@ -37,16 +42,31 @@ class MultiLineScrollMaterial(pygfx.LineMaterial):
             )
 
         self._scroll_x_buffer = Buffer(x)
+        if isinstance(scroll_y, Buffer):
+            self._scroll_y_buffer = scroll_y
+        else:
+            y = np.asarray(scroll_y, dtype=np.float32).reshape(-1)
+            if y.size != int(scroll_n_points) * int(scroll_n_lines):
+                raise ValueError(
+                    "scroll_y length must match scroll_n_points * scroll_n_lines"
+                )
+            self._scroll_y_buffer = Buffer(y)
         self.scroll_n_points = int(scroll_n_points)
+        self.scroll_n_lines = int(scroll_n_lines)
         self.scroll_head = int(scroll_head)
         self.scroll_n_valid = (
             int(scroll_n_points) if scroll_n_valid is None else int(scroll_n_valid)
         )
+        self.scroll_use_shared_x = bool(scroll_use_shared_x)
         self.scroll_enabled = bool(scroll_enabled)
 
     @property
     def scroll_x_buffer(self) -> Buffer:
         return self._scroll_x_buffer
+
+    @property
+    def scroll_y_buffer(self) -> Buffer:
+        return self._scroll_y_buffer
 
     @property
     def scroll_enabled(self) -> bool:
@@ -86,6 +106,24 @@ class MultiLineScrollMaterial(pygfx.LineMaterial):
         self.uniform_buffer.data["scroll_n_valid"] = max(0, min(int(value), n_points))
         self.uniform_buffer.update_full()
 
+    @property
+    def scroll_n_lines(self) -> int:
+        return int(self.uniform_buffer.data["scroll_n_lines"])
+
+    @scroll_n_lines.setter
+    def scroll_n_lines(self, value: int):
+        self.uniform_buffer.data["scroll_n_lines"] = max(1, int(value))
+        self.uniform_buffer.update_full()
+
+    @property
+    def scroll_use_shared_x(self) -> bool:
+        return bool(self.uniform_buffer.data["scroll_use_shared_x"])
+
+    @scroll_use_shared_x.setter
+    def scroll_use_shared_x(self, value: bool):
+        self.uniform_buffer.data["scroll_use_shared_x"] = 1 if bool(value) else 0
+        self.uniform_buffer.update_full()
+
 
 def _build_scroll_line_wgsl() -> str:
     code = load_wgsl("line.wgsl")
@@ -101,6 +139,11 @@ fn multiline_col_from_index(i:i32) -> i32 {
     let stride = max(1, u_material.scroll_n_points + 1);
     let line_index = i / stride;
     return i - line_index * stride;
+}
+
+fn multiline_line_from_index(i:i32) -> i32 {
+    let stride = max(1, u_material.scroll_n_points + 1);
+    return i / stride;
 }
 
 fn remap_multiline_index(i:i32) -> i32 {
@@ -143,10 +186,32 @@ fn remap_multiline_index(i:i32) -> i32 {
     var pos_m_node = load_s_positions(node_index_mapped);
     var pos_m_next = load_s_positions(node_index_next_mapped);
 
-    if (u_material.scroll_enabled != 0) {
-        let col_prev = multiline_col_from_index(node_index_prev);
-        let col_node = multiline_col_from_index(node_index);
-        let col_next = multiline_col_from_index(node_index_next);
+    let col_prev = multiline_col_from_index(node_index_prev);
+    let col_node = multiline_col_from_index(node_index);
+    let col_next = multiline_col_from_index(node_index_next);
+
+    let col_prev_mapped = multiline_col_from_index(node_index_prev_mapped);
+    let col_node_mapped = multiline_col_from_index(node_index_mapped);
+    let col_next_mapped = multiline_col_from_index(node_index_next_mapped);
+
+    let line_prev_mapped = multiline_line_from_index(node_index_prev_mapped);
+    let line_node_mapped = multiline_line_from_index(node_index_mapped);
+    let line_next_mapped = multiline_line_from_index(node_index_next_mapped);
+
+    if (col_prev_mapped < u_material.scroll_n_points) {
+        let y_i = col_prev_mapped * u_material.scroll_n_lines + line_prev_mapped;
+        pos_m_prev.y = load_s_scroll_y(y_i);
+    }
+    if (col_node_mapped < u_material.scroll_n_points) {
+        let y_i = col_node_mapped * u_material.scroll_n_lines + line_node_mapped;
+        pos_m_node.y = load_s_scroll_y(y_i);
+    }
+    if (col_next_mapped < u_material.scroll_n_points) {
+        let y_i = col_next_mapped * u_material.scroll_n_lines + line_next_mapped;
+        pos_m_next.y = load_s_scroll_y(y_i);
+    }
+
+    if (u_material.scroll_use_shared_x != 0) {
         if (col_prev < u_material.scroll_n_points) {
             pos_m_prev.x = load_s_scroll_x(col_prev);
         }
@@ -219,6 +284,12 @@ class MultiLineScrollShader(LineShader):
             "s_scroll_x",
             "buffer/read_only_storage",
             wobject.material.scroll_x_buffer,
+            "VERTEX",
+        )
+        bindings0[binding_index + 1] = Binding(
+            "s_scroll_y",
+            "buffer/read_only_storage",
+            wobject.material.scroll_y_buffer,
             "VERTEX",
         )
         self.define_bindings(0, bindings0)

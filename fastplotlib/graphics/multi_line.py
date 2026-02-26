@@ -153,8 +153,14 @@ class MultiLineGraphic(Graphic):
 
         self._thickness = Thickness(thickness)
 
-        MaterialCls = MultiLineScrollMaterial if scroll else pygfx.LineMaterial
+        MaterialCls = MultiLineScrollMaterial
         aa = kwargs.get("alpha_mode", "auto") in ("blend", "weighted_blend")
+        x_values_shared = self._data.x_values_shared
+        if x_values_shared is None:
+            x_values_shared = np.arange(n_points, dtype=np.float32)
+            use_shared_x = False
+        else:
+            use_shared_x = True
 
         if uniform_color:
             geometry = pygfx.Geometry(positions=self._data.buffer)
@@ -167,21 +173,17 @@ class MultiLineGraphic(Graphic):
                 thickness_space=self.size_space,
                 depth_compare="<=",
             )
-            if scroll:
-                x_values = self._data.x_values_shared
-                if x_values is None:
-                    raise ValueError(
-                        "scroll=True requires all lines to share the same x-values"
-                    )
-                material = MaterialCls(
-                    scroll_x=x_values,
-                    scroll_n_points=n_points,
-                    scroll_head=scroll_head,
-                    scroll_n_valid=scroll_n_valid,
-                    **material_kwargs,
-                )
-            else:
-                material = MaterialCls(**material_kwargs)
+            material = MaterialCls(
+                scroll_x=x_values_shared,
+                scroll_y=self._data.y_buffer,
+                scroll_n_points=n_points,
+                scroll_n_lines=n_lines,
+                scroll_enabled=scroll,
+                scroll_head=scroll_head,
+                scroll_n_valid=scroll_n_valid,
+                scroll_use_shared_x=use_shared_x,
+                **material_kwargs,
+            )
         else:
             material_kwargs = dict(
                 aa=aa,
@@ -191,21 +193,17 @@ class MultiLineGraphic(Graphic):
                 thickness_space=self.size_space,
                 depth_compare="<=",
             )
-            if scroll:
-                x_values = self._data.x_values_shared
-                if x_values is None:
-                    raise ValueError(
-                        "scroll=True requires all lines to share the same x-values"
-                    )
-                material = MaterialCls(
-                    scroll_x=x_values,
-                    scroll_n_points=n_points,
-                    scroll_head=scroll_head,
-                    scroll_n_valid=scroll_n_valid,
-                    **material_kwargs,
-                )
-            else:
-                material = MaterialCls(**material_kwargs)
+            material = MaterialCls(
+                scroll_x=x_values_shared,
+                scroll_y=self._data.y_buffer,
+                scroll_n_points=n_points,
+                scroll_n_lines=n_lines,
+                scroll_enabled=scroll,
+                scroll_head=scroll_head,
+                scroll_n_valid=scroll_n_valid,
+                scroll_use_shared_x=use_shared_x,
+                **material_kwargs,
+            )
             geometry = pygfx.Geometry(
                 positions=self._data.buffer, colors=self._colors.buffer
             )
@@ -226,7 +224,10 @@ class MultiLineGraphic(Graphic):
 
     @property
     def scroll_enabled(self) -> bool:
-        return isinstance(self._line_world_object.material, MultiLineScrollMaterial)
+        material = self._line_world_object.material
+        if not isinstance(material, MultiLineScrollMaterial):
+            return False
+        return material.scroll_enabled
 
     @property
     def scroll_head(self) -> int:
@@ -300,7 +301,7 @@ class MultiLineGraphic(Graphic):
             y_data[:, :] = tail
             material.scroll_head = 0
             material.scroll_n_valid = n_points
-            self.data.mark_point_ranges_dirty([(0, n_points)])
+            self.data.mark_y_point_ranges_dirty([(0, n_points)])
             return
 
         if n_valid < n_points:
@@ -335,7 +336,7 @@ class MultiLineGraphic(Graphic):
 
         material.scroll_head = head
         material.scroll_n_valid = n_valid
-        self.data.mark_point_ranges_dirty(dirty_point_segments)
+        self.data.mark_y_point_ranges_dirty(dirty_point_segments)
 
     def _apply_z_offset_shear(self, scale: float):
         shear = np.eye(4, dtype=np.float32)
@@ -381,7 +382,7 @@ class MultiLineGraphic(Graphic):
 
     @data.setter
     def data(self, value):
-        if self.scroll_enabled:
+        if isinstance(self._line_world_object.material, MultiLineScrollMaterial):
             parsed = MultiLinePositions._parse_input(value)
             in_data, mode, n_lines, n_points = parsed
 
@@ -392,18 +393,21 @@ class MultiLineGraphic(Graphic):
 
             if mode in ("single_y", "multi_y"):
                 x_values = np.arange(n_points, dtype=np.float32)
+                use_shared_x = True
             else:
                 xs = np.asarray(in_data[..., 0], dtype=np.float32)
-                if not np.allclose(xs, xs[0][None, :], equal_nan=False):
-                    raise ValueError(
-                        "scroll=True requires all lines to share the same x-values"
-                    )
-                x_values = xs[0]
+                if np.allclose(xs, xs[0][None, :], equal_nan=False):
+                    x_values = xs[0]
+                    use_shared_x = True
+                else:
+                    x_values = np.arange(n_points, dtype=np.float32)
+                    use_shared_x = False
 
             self._data[:] = value
             material: MultiLineScrollMaterial = self._line_world_object.material
             material.scroll_x_buffer.data[:] = x_values
             material.scroll_x_buffer.update_full()
+            material.scroll_use_shared_x = use_shared_x
             return
 
         self._data[:] = value

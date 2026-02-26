@@ -172,14 +172,15 @@ def test_multi_line_append_y_ring_updates():
     npt.assert_allclose(graphic.data.value[:, :, 1], expected_physical)
 
 
-def test_multi_line_scroll_requires_shared_x():
+def test_multi_line_scroll_supports_non_shared_x():
     data = np.zeros((2, 4, 2), dtype=np.float32)
     data[0, :, 0] = np.array([0, 1, 2, 3], dtype=np.float32)
     data[1, :, 0] = np.array([0, 2, 3, 5], dtype=np.float32)
     fig = fpl.Figure()
-
-    with pytest.raises(ValueError, match="share the same x-values"):
-        fig[0, 0].add_multi_line(data, scroll=True)
+    graphic = fig[0, 0].add_multi_line(data, scroll=True)
+    line = graphic.world_object.children[0]
+    assert isinstance(line.material, MultiLineScrollMaterial)
+    assert line.material.scroll_use_shared_x is False
 
 
 def test_multi_line_scroll_shader_uses_valid_count_in_remap():
@@ -193,8 +194,8 @@ def test_multi_line_append_y_uses_update_range_not_full(monkeypatch):
     graphic = fig[0, 0].add_multi_line(data, scroll=True, scroll_n_valid=0)
 
     calls = {"range": 0, "full": 0}
-    original_update_range = graphic.data.buffer.update_range
-    original_update_full = graphic.data.buffer.update_full
+    original_update_range = graphic.data.y_buffer.update_range
+    original_update_full = graphic.data.y_buffer.update_full
 
     def _update_range(*, offset, size):
         calls["range"] += 1
@@ -204,8 +205,8 @@ def test_multi_line_append_y_uses_update_range_not_full(monkeypatch):
         calls["full"] += 1
         return original_update_full()
 
-    monkeypatch.setattr(graphic.data.buffer, "update_range", _update_range)
-    monkeypatch.setattr(graphic.data.buffer, "update_full", _update_full)
+    monkeypatch.setattr(graphic.data.y_buffer, "update_range", _update_range)
+    monkeypatch.setattr(graphic.data.y_buffer, "update_full", _update_full)
 
     y = np.array([[1.0, 2.0, 3.0], [10.0, 20.0, 30.0]], dtype=np.float32)
     graphic.append_y(y)
@@ -248,3 +249,23 @@ def test_multi_line_scroll_data_set_updates_scroll_x_buffer():
 
     graphic.data = new_data
     npt.assert_allclose(line.material.scroll_x_buffer.data, new_x)
+
+
+def test_multi_line_data_set_non_shared_x_disables_shared_x_buffering():
+    n_lines = 2
+    n_points = 5
+    data = np.zeros((n_lines, n_points), dtype=np.float32)
+    fig = fpl.Figure()
+    graphic = fig[0, 0].add_multi_line(data, scroll=False)
+    line = graphic.world_object.children[0]
+
+    new_data = np.zeros((n_lines, n_points, 2), dtype=np.float32)
+    new_data[0, :, 0] = np.array([0, 1, 2, 3, 4], dtype=np.float32)
+    new_data[1, :, 0] = np.array([0, 2, 4, 6, 8], dtype=np.float32)
+    new_data[:, :, 1] = np.array(
+        [[1, 2, 3, 4, 5], [10, 20, 30, 40, 50]], dtype=np.float32
+    )
+
+    graphic.data = new_data
+    assert isinstance(line.material, MultiLineScrollMaterial)
+    assert line.material.scroll_use_shared_x is False

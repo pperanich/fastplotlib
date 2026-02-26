@@ -322,6 +322,8 @@ class MultiLinePositions(BufferManager):
         self._data_3d[:, -1, :] = np.nan
         self._x_values_shared = None
         self._update_x_values_shared()
+        y_flat = np.ascontiguousarray(self._data_view[:, :, 1].T.reshape(-1))
+        self._y_buffer = pygfx.Buffer(y_flat, force_contiguous=True)
 
     def _update_x_values_shared(self) -> None:
         xs = self._data_view[:, :, 0]
@@ -402,6 +404,17 @@ class MultiLinePositions(BufferManager):
         """Shared x-values used by all lines, if available."""
         return self._x_values_shared
 
+    @property
+    def y_buffer(self) -> pygfx.Buffer:
+        """Time-major y buffer of shape [n_points, n_lines], flattened."""
+        return self._y_buffer
+
+    def _sync_y_buffer_full(self) -> None:
+        self._y_buffer.data[:] = np.ascontiguousarray(
+            self._data_view[:, :, 1].T.reshape(-1)
+        )
+        self._y_buffer.update_full()
+
     @block_reentrance
     def __setitem__(
         self,
@@ -423,6 +436,7 @@ class MultiLinePositions(BufferManager):
         else:
             self._data_view[key] = value
 
+        self._sync_y_buffer_full()
         self.buffer.update_full()
         self._emit_event(self._property_name, key, value)
 
@@ -459,6 +473,34 @@ class MultiLinePositions(BufferManager):
             for line_i in range(self._n_lines):
                 offset = line_i * stride + start
                 self.buffer.update_range(offset=offset, size=count)
+
+    def mark_y_point_ranges_dirty(self, segments: list[tuple[int, int]]):
+        """
+        Mark y ranges as dirty in the time-major y buffer.
+
+        Parameters
+        ----------
+        segments:
+            List of ``(start, count)`` point ranges in ``[0, n_points)``.
+            Each range maps to one contiguous range in ``y_buffer``.
+        """
+        if not segments:
+            return
+
+        n_points = self._n_points
+        n_lines = self._n_lines
+
+        for start, count in segments:
+            if count <= 0:
+                continue
+            if start < 0 or start >= n_points:
+                raise ValueError("point start out of range for MultiLinePositions")
+            if start + count > n_points:
+                raise ValueError("point range exceeds n_points in MultiLinePositions")
+
+            offset = start * n_lines
+            size = count * n_lines
+            self._y_buffer.update_range(offset=offset, size=size)
 
     def update_columns(self, segments: list[tuple[int, int]]):
         # Backwards compat for earlier internal naming; use point terminology.
