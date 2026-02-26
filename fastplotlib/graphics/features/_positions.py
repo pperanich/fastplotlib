@@ -415,6 +415,45 @@ class MultiLinePositions(BufferManager):
         )
         self._y_buffer.update_full()
 
+    def _sync_y_buffer_range(self, start: int, count: int) -> None:
+        start = int(start)
+        count = int(count)
+        if count <= 0:
+            return
+        if start < 0 or start >= self._n_points:
+            raise ValueError("point start out of range for MultiLinePositions")
+        if start + count > self._n_points:
+            raise ValueError("point range exceeds n_points in MultiLinePositions")
+
+        n_lines = self._n_lines
+        offset = start * n_lines
+        size = count * n_lines
+        chunk = np.ascontiguousarray(self._data_view[:, start : start + count, 1].T)
+        self._y_buffer.data[offset : offset + size] = chunk.reshape(-1)
+        self._y_buffer.update_range(offset=offset, size=size)
+
+    def _set_y_range(self, start: int, y_values: np.ndarray) -> None:
+        y_values = np.asarray(y_values, dtype=np.float32)
+        if y_values.ndim != 2 or y_values.shape[0] != self._n_lines:
+            raise ValueError("y_values must have shape (n_lines, count)")
+        count = int(y_values.shape[1])
+        if count == 0:
+            return
+
+        start = int(start)
+        if start < 0 or start >= self._n_points:
+            raise ValueError("point start out of range for MultiLinePositions")
+        if start + count > self._n_points:
+            raise ValueError("point range exceeds n_points in MultiLinePositions")
+
+        self._data_view[:, start : start + count, 1] = y_values
+        n_lines = self._n_lines
+        offset = start * n_lines
+        size = count * n_lines
+        chunk = np.ascontiguousarray(y_values.T)
+        self._y_buffer.data[offset : offset + size] = chunk.reshape(-1)
+        self._y_buffer.update_range(offset=offset, size=size)
+
     @block_reentrance
     def __setitem__(
         self,
@@ -433,11 +472,49 @@ class MultiLinePositions(BufferManager):
             self._fill_packed(self._data_3d[:, :-1, :], in_data, mode)
             self._data_3d[:, -1, :] = np.nan
             self._update_x_values_shared()
+            self._sync_y_buffer_full()
+            self.buffer.update_full()
         else:
             self._data_view[key] = value
+            # Try fast-path incremental y sync for common slice patterns.
+            only_y = False
+            if (
+                isinstance(key, tuple)
+                and len(key) == 3
+                and key[0] == slice(None)
+                and isinstance(key[1], slice)
+                and (key[1].step is None or key[1].step == 1)
+            ):
+                start, stop, _ = key[1].indices(self._n_points)
+                count = max(0, stop - start)
+                dims = key[2]
+                includes_y = dims == 1 or dims == slice(None) or (
+                    isinstance(dims, slice)
+                    and 1 in range(*dims.indices(3))
+                    and (dims.step is None or dims.step == 1)
+                )
+                includes_x = dims == 0 or dims == slice(None) or (
+                    isinstance(dims, slice)
+                    and 0 in range(*dims.indices(3))
+                    and (dims.step is None or dims.step == 1)
+                )
+                includes_z = dims == 2 or dims == slice(None) or (
+                    isinstance(dims, slice)
+                    and 2 in range(*dims.indices(3))
+                    and (dims.step is None or dims.step == 1)
+                )
+                only_y = includes_y and not (includes_x or includes_z)
+                if includes_y:
+                    self._sync_y_buffer_range(start, count)
+                else:
+                    # No y changed, no y-buffer sync needed.
+                    pass
+            else:
+                self._sync_y_buffer_full()
 
-        self._sync_y_buffer_full()
-        self.buffer.update_full()
+            # Skip positions upload for y-only updates; y is sourced from y_buffer in the shader.
+            if not only_y:
+                self.buffer.update_full()
         self._emit_event(self._property_name, key, value)
 
     def __getitem__(self, item):
@@ -501,6 +578,18 @@ class MultiLinePositions(BufferManager):
             offset = start * n_lines
             size = count * n_lines
             self._y_buffer.update_range(offset=offset, size=size)
+
+    def set_y_point_ranges(self, segments: list[tuple[int, np.ndarray]]):
+        """
+        Set y values for one or more point ranges and mark those ranges dirty.
+
+        Parameters
+        ----------
+        segments:
+            List of ``(start, y_values)`` where y_values has shape (n_lines, count).
+        """
+        for start, y_values in segments:
+            self._set_y_range(start, y_values)
 
     def update_columns(self, segments: list[tuple[int, int]]):
         # Backwards compat for earlier internal naming; use point terminology.

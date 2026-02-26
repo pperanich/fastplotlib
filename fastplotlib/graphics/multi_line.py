@@ -6,6 +6,7 @@ import pygfx
 
 from ._base import Graphic
 from ._multi_line_scroll import MultiLineScrollMaterial
+from ._multi_line_backend import MultiLineBackend
 from .features import (
     Thickness,
     VertexColors,
@@ -211,6 +212,7 @@ class MultiLineGraphic(Graphic):
         line_world_object: pygfx.Line = pygfx.Line(geometry=geometry, material=material)
         self._line_world_object = line_world_object
         self._feature_target = SimpleNamespace(world_object=self._line_world_object)
+        self._backend = MultiLineBackend(self._data, self._line_world_object.material)
 
         self._z_offset_scale = z_offset_scale
         if z_offset_scale not in (None, 0.0):
@@ -245,10 +247,7 @@ class MultiLineGraphic(Graphic):
         if not self.scroll_enabled:
             raise RuntimeError("scroll mode is disabled for this MultiLineGraphic")
 
-        material: MultiLineScrollMaterial = self._line_world_object.material
-        material.scroll_head = int(head)
-        if n_valid is not None:
-            material.scroll_n_valid = int(n_valid)
+        self._backend.set_scroll(head, n_valid=n_valid)
 
     def append_y(self, values: np.ndarray):
         """
@@ -259,84 +258,7 @@ class MultiLineGraphic(Graphic):
         values: np.ndarray
             Shape ``(n_lines,)`` for one sample, or ``(n_lines, n_new)`` for a batch.
         """
-        if not self.scroll_enabled:
-            raise RuntimeError("append_y is only available when scroll=True")
-
-        y_new = np.asarray(values, dtype=np.float32)
-        if y_new.ndim == 1:
-            if y_new.shape[0] != self.n_lines:
-                raise ValueError("append_y 1D values must have shape (n_lines,)")
-            y_new = y_new[:, None]
-        elif y_new.ndim == 2:
-            if y_new.shape[0] != self.n_lines:
-                raise ValueError("append_y 2D values must have shape (n_lines, n_new)")
-        else:
-            raise ValueError("append_y values must be 1D or 2D")
-
-        n_new = int(y_new.shape[1])
-        if n_new == 0:
-            return
-
-        material: MultiLineScrollMaterial = self._line_world_object.material
-        n_points = self.n_points
-        head = material.scroll_head
-        n_valid = material.scroll_n_valid
-        y_data = self.data.value[:, :, 1]
-        dirty_point_segments: list[tuple[int, int]] = []
-
-        def add_segment(start: int, count: int):
-            if count <= 0:
-                return
-            start = int(start) % n_points
-            end = start + count
-            if end <= n_points:
-                dirty_point_segments.append((start, count))
-            else:
-                split = n_points - start
-                dirty_point_segments.append((start, split))
-                dirty_point_segments.append((0, end % n_points))
-
-        if n_new >= n_points:
-            tail = y_new[:, -n_points:]
-            y_data[:, :] = tail
-            material.scroll_head = 0
-            material.scroll_n_valid = n_points
-            self.data.mark_y_point_ranges_dirty([(0, n_points)])
-            return
-
-        if n_valid < n_points:
-            free = n_points - n_valid
-            fill_count = min(free, n_new)
-            if fill_count > 0:
-                i0 = (head + n_valid) % n_points
-                i1 = i0 + fill_count
-                if i1 <= n_points:
-                    y_data[:, i0:i1] = y_new[:, :fill_count]
-                else:
-                    split = n_points - i0
-                    y_data[:, i0:] = y_new[:, :split]
-                    y_data[:, : i1 % n_points] = y_new[:, split:fill_count]
-                add_segment(i0, fill_count)
-                n_valid += fill_count
-                y_new = y_new[:, fill_count:]
-                n_new = y_new.shape[1]
-
-        if n_new > 0:
-            i0 = head
-            i1 = head + n_new
-            if i1 <= n_points:
-                y_data[:, i0:i1] = y_new
-            else:
-                split = n_points - i0
-                y_data[:, i0:] = y_new[:, :split]
-                y_data[:, : i1 % n_points] = y_new[:, split:]
-            add_segment(i0, n_new)
-            head = (head + n_new) % n_points
-            n_valid = n_points
-
-        material.scroll_head = head
-        material.scroll_n_valid = n_valid
-        self.data.mark_y_point_ranges_dirty(dirty_point_segments)
+        self._backend.append_y(values)
 
     def _apply_z_offset_shear(self, scale: float):
         shear = np.eye(4, dtype=np.float32)
@@ -383,31 +305,7 @@ class MultiLineGraphic(Graphic):
     @data.setter
     def data(self, value):
         if isinstance(self._line_world_object.material, MultiLineScrollMaterial):
-            parsed = MultiLinePositions._parse_input(value)
-            in_data, mode, n_lines, n_points = parsed
-
-            if (n_lines, n_points) != (self.n_lines, self.n_points):
-                raise ValueError(
-                    "Full data assignment must match existing n_lines and n_points."
-                )
-
-            if mode in ("single_y", "multi_y"):
-                x_values = np.arange(n_points, dtype=np.float32)
-                use_shared_x = True
-            else:
-                xs = np.asarray(in_data[..., 0], dtype=np.float32)
-                if np.allclose(xs, xs[0][None, :], equal_nan=False):
-                    x_values = xs[0]
-                    use_shared_x = True
-                else:
-                    x_values = np.arange(n_points, dtype=np.float32)
-                    use_shared_x = False
-
-            self._data[:] = value
-            material: MultiLineScrollMaterial = self._line_world_object.material
-            material.scroll_x_buffer.data[:] = x_values
-            material.scroll_x_buffer.update_full()
-            material.scroll_use_shared_x = use_shared_x
+            self._backend.set_data(value)
             return
 
         self._data[:] = value
