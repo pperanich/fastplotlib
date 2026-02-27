@@ -5,7 +5,7 @@ import pygfx
 import pylinalg as la
 
 import fastplotlib as fpl
-from fastplotlib.graphics._multi_line_scroll import MultiLineScrollMaterial, _SCROLL_LINE_WGSL
+from fastplotlib.graphics._multi_line_scroll import MultiLineScrollMaterial, _patch_line_shader
 from fastplotlib.graphics.features import MultiLinePositions, VertexColors
 
 
@@ -183,9 +183,16 @@ def test_multi_line_scroll_supports_non_shared_x():
     assert line.material.scroll_use_shared_x is False
 
 
-def test_multi_line_scroll_shader_uses_valid_count_in_remap():
-    assert "(col + u_material.scroll_head + n_valid) % n_points" in _SCROLL_LINE_WGSL
-    assert "pick_mapped_i = remap_multiline_index(node_index)" in _SCROLL_LINE_WGSL
+def test_multi_line_scroll_shader_patches_applied():
+    from pygfx.renderers.wgpu import load_wgsl
+
+    base_code = load_wgsl("line.wgsl")
+    patched = _patch_line_shader(base_code)
+    assert "remap_multiline_index" in patched
+    assert "(col + u_material.scroll_head + n_valid) % n_points" in patched
+    assert "pick_mapped_i = remap_multiline_index(node_index)" in patched
+    assert "load_s_scroll_y" in patched
+    assert "load_s_scroll_x" in patched
 
 
 def test_multi_line_append_y_uses_update_range_not_full(monkeypatch):
