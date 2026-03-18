@@ -3,6 +3,7 @@ from ._positions import (
     UniformColor,
     SizeSpace,
     VertexPositions,
+    MultiLinePositions,
     VertexCmap,
 )
 from ._mesh import (
@@ -79,6 +80,7 @@ __all__ = [
     "UniformColor",
     "SizeSpace",
     "VertexPositions",
+    "MultiLinePositions",
     "VertexCmap",
     "MeshIndices",
     "MeshCmap",

@@ -65,6 +65,9 @@ Homepage = "https://www.fastplotlib.org/"
 Documentation = "https://www.fastplotlib.org/"
 Repository = "https://github.com/fastplotlib/fastplotlib"
 
+[tool.uv.sources]
+pygfx = {git="https://github.com/pperanich/pygfx", branch = "line-shader-hook"}
+
 # ===== Building
 
 [build-system]

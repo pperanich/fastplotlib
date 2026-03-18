@@ -1,4 +1,5 @@
 from typing import Any, Sequence
+from warnings import warn
 
 import numpy as np
 import pygfx
@@ -278,6 +279,351 @@ class VertexPositions(BufferManager):
 
     def __len__(self):
         return len(self.buffer.data)
+
+
+class MultiLinePositions(BufferManager):
+    event_info_spec = [
+        {
+            "dict key": "key",
+            "type": "slice, index (int) or numpy-like fancy index",
+            "description": "key at which multi-line positions data were indexed/sliced",
+        },
+        {
+            "dict key": "value",
+            "type": "int | float | array-like",
+            "description": "new data values for points that were changed",
+        },
+    ]
+
+    def __init__(
+        self, data: Any, isolated_buffer: bool = True, property_name: str = "data"
+    ):
+        parsed = self._parse_input(data)
+        in_data, mode, n_lines, n_points = parsed
+        self._n_lines = n_lines
+        self._n_points = n_points
+
+        out_dtype = in_data.dtype
+        if out_dtype != np.float32:
+            warn(f"casting {out_dtype} array to float32")
+            out_dtype = np.float32
+
+        packed = np.empty((self._n_lines, self._n_points + 1, 3), dtype=out_dtype)
+        self._fill_packed(packed[:, :-1, :], in_data, mode)
+        packed[:, self._n_points, :] = np.nan
+
+        flat = packed.reshape(-1, 3)
+        super().__init__(
+            flat, isolated_buffer=isolated_buffer, property_name=property_name
+        )
+
+        self._data_3d = self._buffer.data.reshape(self._n_lines, self._n_points + 1, 3)
+        self._data_view = self._data_3d[:, :-1, :]
+        self._data_3d[:, -1, :] = np.nan
+        self._x_values_shared = None
+        self._update_x_values_shared()
+        y_flat = np.ascontiguousarray(self._data_view[:, :, 1].T.reshape(-1))
+        self._y_buffer = pygfx.Buffer(y_flat, force_contiguous=True)
+
+    def _update_x_values_shared(self) -> None:
+        xs = self._data_view[:, :, 0]
+        if np.allclose(xs, xs[0][None, :], equal_nan=False):
+            self._x_values_shared = xs[0].copy()
+        else:
+            self._x_values_shared = None
+
+    @staticmethod
+    def _parse_input(data):
+        data = np.asarray(data)
+
+        if data.dtype == object:
+            raise ValueError(
+                "MultiLine data must be a rectangular array with the same number of points per line"
+            )
+
+        if data.ndim == 1:
+            return data, "single_y", 1, data.shape[0]
+
+        if data.ndim == 2:
+            return data, "multi_y", data.shape[0], data.shape[1]
+
+        if data.ndim != 3:
+            raise ValueError("MultiLine data must be 1D, 2D, or 3D")
+
+        if data.shape[2] not in (2, 3):
+            raise ValueError("MultiLine data last dimension must be 2 or 3")
+
+        mode = "multi_xyz" if data.shape[2] == 3 else "multi_xy"
+        return data, mode, data.shape[0], data.shape[1]
+
+    def _fill_packed(self, packed, in_data, mode):
+        if mode == "single_y":
+            n_points = packed.shape[1]
+            packed[0, :, 0] = np.arange(n_points, dtype=packed.dtype)
+            packed[0, :, 1] = in_data
+            packed[0, :, 2] = 0.0
+            return
+
+        if mode == "multi_y":
+            n_points = packed.shape[1]
+            packed[:, :, 0] = np.arange(n_points, dtype=packed.dtype)[None, :]
+            packed[:, :, 1] = in_data
+            packed[:, :, 2] = 0.0
+            return
+
+        if mode == "multi_xy":
+            packed[:, :, 0] = in_data[..., 0]
+            packed[:, :, 1] = in_data[..., 1]
+            packed[:, :, 2] = 0.0
+            return
+
+        if mode == "multi_xyz":
+            packed[:, :, :] = in_data
+            return
+
+        raise ValueError(f"Unknown MultiLine input mode: {mode}")
+
+    @property
+    def value(self) -> np.ndarray:
+        return self._data_view
+
+    @property
+    def n_lines(self) -> int:
+        return self._n_lines
+
+    @property
+    def n_points(self) -> int:
+        return self._n_points
+
+    @property
+    def flat_value(self) -> np.ndarray:
+        return self._buffer.data
+
+    @property
+    def x_values_shared(self) -> np.ndarray | None:
+        """Shared x-values used by all lines, if available."""
+        return self._x_values_shared
+
+    @property
+    def y_buffer(self) -> pygfx.Buffer:
+        """Time-major y buffer of shape [n_points, n_lines], flattened."""
+        return self._y_buffer
+
+    def _sync_y_buffer_full(self) -> None:
+        self._y_buffer.data[:] = np.ascontiguousarray(
+            self._data_view[:, :, 1].T.reshape(-1)
+        )
+        self._y_buffer.update_full()
+
+    def _sync_y_buffer_range(self, start: int, count: int) -> None:
+        start = int(start)
+        count = int(count)
+        if count <= 0:
+            return
+        if start < 0 or start >= self._n_points:
+            raise ValueError("point start out of range for MultiLinePositions")
+        if start + count > self._n_points:
+            raise ValueError("point range exceeds n_points in MultiLinePositions")
+
+        n_lines = self._n_lines
+        offset = start * n_lines
+        size = count * n_lines
+        chunk = np.ascontiguousarray(self._data_view[:, start : start + count, 1].T)
+        self._y_buffer.data[offset : offset + size] = chunk.reshape(-1)
+        self._y_buffer.update_range(offset=offset, size=size)
+
+    def _set_y_range(self, start: int, y_values: np.ndarray) -> None:
+        y_values = np.asarray(y_values, dtype=np.float32)
+        if y_values.ndim != 2 or y_values.shape[0] != self._n_lines:
+            raise ValueError("y_values must have shape (n_lines, count)")
+        count = int(y_values.shape[1])
+        if count == 0:
+            return
+
+        start = int(start)
+        if start < 0 or start >= self._n_points:
+            raise ValueError("point start out of range for MultiLinePositions")
+        if start + count > self._n_points:
+            raise ValueError("point range exceeds n_points in MultiLinePositions")
+
+        self._data_view[:, start : start + count, 1] = y_values
+        n_lines = self._n_lines
+        offset = start * n_lines
+        size = count * n_lines
+        chunk = np.ascontiguousarray(y_values.T)
+        self._y_buffer.data[offset : offset + size] = chunk.reshape(-1)
+        self._y_buffer.update_range(offset=offset, size=size)
+
+    @block_reentrance
+    def __setitem__(
+        self,
+        key: int | slice | np.ndarray[int | bool] | tuple[slice, ...],
+        value: np.ndarray | float | list[float],
+    ):
+        if self._is_full_slice(key):
+            parsed = self._parse_input(value)
+            in_data, mode, n_lines, n_points = parsed
+
+            if (n_lines, n_points) != (self._n_lines, self._n_points):
+                raise ValueError(
+                    "Full data assignment must match existing n_lines and n_points."
+                )
+
+            self._fill_packed(self._data_3d[:, :-1, :], in_data, mode)
+            self._data_3d[:, -1, :] = np.nan
+            self._update_x_values_shared()
+            self._sync_y_buffer_full()
+            self.buffer.update_full()
+        else:
+            self._data_view[key] = value
+            # Try fast-path incremental y sync for common slice patterns.
+            only_y = False
+            x_changed = True
+            if (
+                isinstance(key, tuple)
+                and len(key) == 3
+                and key[0] == slice(None)
+                and isinstance(key[1], slice)
+                and (key[1].step is None or key[1].step == 1)
+            ):
+                start, stop, _ = key[1].indices(self._n_points)
+                count = max(0, stop - start)
+                dims = key[2]
+                includes_y = (
+                    dims == 1
+                    or dims == slice(None)
+                    or (
+                        isinstance(dims, slice)
+                        and 1 in range(*dims.indices(3))
+                        and (dims.step is None or dims.step == 1)
+                    )
+                )
+                includes_x = (
+                    dims == 0
+                    or dims == slice(None)
+                    or (
+                        isinstance(dims, slice)
+                        and 0 in range(*dims.indices(3))
+                        and (dims.step is None or dims.step == 1)
+                    )
+                )
+                includes_z = (
+                    dims == 2
+                    or dims == slice(None)
+                    or (
+                        isinstance(dims, slice)
+                        and 2 in range(*dims.indices(3))
+                        and (dims.step is None or dims.step == 1)
+                    )
+                )
+                only_y = includes_y and not (includes_x or includes_z)
+                x_changed = includes_x
+                if includes_y:
+                    self._sync_y_buffer_range(start, count)
+                else:
+                    # No y changed, no y-buffer sync needed.
+                    pass
+            else:
+                self._sync_y_buffer_full()
+
+            if x_changed:
+                self._update_x_values_shared()
+
+            # Skip positions upload for y-only updates; y is sourced from y_buffer in the shader.
+            if not only_y:
+                self.buffer.update_full()
+        self._emit_event(self._property_name, key, value)
+
+    def __getitem__(self, item):
+        return self._data_view[item]
+
+    def __len__(self):
+        return self._n_lines
+
+    def mark_point_ranges_dirty(self, segments: list[tuple[int, int]]):
+        """
+        Mark point segments as dirty for GPU upload.
+
+        Parameters
+        ----------
+        segments:
+            List of ``(start, count)`` point ranges in ``[0, n_points)``.
+            These are applied for every line in the packed multiline buffer.
+        """
+        if not segments:
+            return
+
+        stride = self._n_points + 1
+        n_points = self._n_points
+
+        for start, count in segments:
+            if count <= 0:
+                continue
+            if start < 0 or start >= n_points:
+                raise ValueError("point start out of range for MultiLinePositions")
+            if start + count > n_points:
+                raise ValueError("point range exceeds n_points in MultiLinePositions")
+
+            for line_i in range(self._n_lines):
+                offset = line_i * stride + start
+                self.buffer.update_range(offset=offset, size=count)
+
+    def mark_y_point_ranges_dirty(self, segments: list[tuple[int, int]]):
+        """
+        Mark y ranges as dirty in the time-major y buffer.
+
+        Parameters
+        ----------
+        segments:
+            List of ``(start, count)`` point ranges in ``[0, n_points)``.
+            Each range maps to one contiguous range in ``y_buffer``.
+        """
+        if not segments:
+            return
+
+        n_points = self._n_points
+        n_lines = self._n_lines
+
+        for start, count in segments:
+            if count <= 0:
+                continue
+            if start < 0 or start >= n_points:
+                raise ValueError("point start out of range for MultiLinePositions")
+            if start + count > n_points:
+                raise ValueError("point range exceeds n_points in MultiLinePositions")
+
+            offset = start * n_lines
+            size = count * n_lines
+            self._y_buffer.update_range(offset=offset, size=size)
+
+    def set_y_point_ranges(self, segments: list[tuple[int, np.ndarray]]):
+        """
+        Set y values for one or more point ranges and mark those ranges dirty.
+
+        Parameters
+        ----------
+        segments:
+            List of ``(start, y_values)`` where y_values has shape (n_lines, count).
+        """
+        for start, y_values in segments:
+            self._set_y_range(start, y_values)
+
+    def update_columns(self, segments: list[tuple[int, int]]):
+        # Backwards compat for earlier internal naming; use point terminology.
+        self.mark_point_ranges_dirty(segments)
+
+    @staticmethod
+    def _is_full_slice(key) -> bool:
+        if key == slice(None):
+            return True
+
+        if not isinstance(key, tuple):
+            return False
+
+        if any(k is Ellipsis for k in key):
+            return False
+
+        return all(k == slice(None) for k in key)
 
 
 class VertexCmap(BufferManager):
